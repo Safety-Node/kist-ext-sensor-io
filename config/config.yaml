@@ -1,0 +1,16 @@
+# kist-ext-sensor-io — single config file, one section per sensor
+# (same convention as kist-gearsonic-inference / kist-navigation-planner)
+
+unitree:
+  # DDS domain id (default 0; must match the consumers')
+  domain_id: 0
+  # Network interface toward the consumers. On the G1 onboard PC this is
+  # the robot-LAN interface; use "lo" for same-machine testing.
+  network_interface: lo
+
+uwb:
+  # Decawave DWM dongle (udev symlink — see README)
+  serial_port: /dev/uwb
+  serial_baud: 115200
+  # frame_id stamped on published fixes (UWB local frame)
+  frame_id: map
