@@ -1,4 +1,4 @@
-#include "camera/camera_capture.hpp"
+#include "realsense/transmitter/camera_capture.hpp"
 
 #include <librealsense2/rs.hpp>
 
@@ -20,9 +20,7 @@ bool CameraCapture::start(const CameraCaptureConfig& config) {
         cfg.enable_stream(RS2_STREAM_DEPTH,
                           config_.depth_width, config_.depth_height,
                           RS2_FORMAT_Z16, config_.depth_fps);
-        // A color stream is needed either to publish color or as the
-        // align target for depth.
-        if (config_.color_enabled || config_.align_to_color)
+        if (config_.color_enabled)
             cfg.enable_stream(RS2_STREAM_COLOR,
                               config_.color_width, config_.color_height,
                               RS2_FORMAT_BGR8, config_.color_fps);

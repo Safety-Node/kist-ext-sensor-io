@@ -15,3 +15,17 @@ uwb:
   serial_baud: 115200
   # frame_id stamped on published fixes (UWB local frame)
   frame_id: map
+
+camera:
+  enabled: true
+  # RealSense depth (Z16) + color (BGR8), aligned depth->color
+  depth_width: 640
+  depth_height: 480
+  depth_fps: 30
+  color_width: 640
+  color_height: 480
+  color_fps: 30
+  align_to_color: true
+  # H.264 color encoder (x264)
+  color_bitrate_kbps: 4000
+  color_keyframe_interval: 30

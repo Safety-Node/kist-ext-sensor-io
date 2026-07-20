@@ -2,7 +2,7 @@
 // hardware, no DDS). serialize_depth -> deserialize_depth must be a
 // byte-exact round-trip of every field, and a truncated blob must throw.
 
-#include "camera/rvl_depth_wire.hpp"
+#include "realsense/rvl_depth_wire.hpp"
 
 #include <cstdio>
 #include <stdexcept>

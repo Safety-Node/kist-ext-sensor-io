@@ -6,7 +6,8 @@
 // all-zero / single-pixel edges. Also asserts compression actually
 // happens on realistic (smooth) data.
 
-#include "camera/rvl_depth_codec.hpp"
+#include "realsense/transmitter/rvl_depth_encoder.hpp"
+#include "realsense/receiver/rvl_depth_decoder.hpp"
 
 #include <cstdio>
 #include <cstring>

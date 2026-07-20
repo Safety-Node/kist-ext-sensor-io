@@ -8,9 +8,10 @@
 // Writes a PNG (default /tmp/depth_view.png) and, if a display is
 // available, opens a window (press any key to close).
 
-#include "camera/depth_publisher.hpp"
-#include "camera/depth_receiver.hpp"
-#include "camera/rvl_depth_codec.hpp"
+#include "realsense/transmitter/depth_publisher.hpp"
+#include "realsense/receiver/depth_receiver.hpp"
+#include "realsense/transmitter/rvl_depth_encoder.hpp"
+#include "realsense/receiver/rvl_depth_decoder.hpp"
 
 #include <opencv2/opencv.hpp>
 

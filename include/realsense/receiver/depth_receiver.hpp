@@ -1,8 +1,7 @@
 #pragma once
 
 #include "common/data_buffer.hpp"
-#include "camera/depth_publisher.hpp"  // kCameraDepthTopic
-#include "camera/rvl_depth_frame.hpp"
+#include "realsense/rvl_depth_frame.hpp"
 
 #include <atomic>
 #include <functional>

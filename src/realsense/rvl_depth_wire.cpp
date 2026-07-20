@@ -1,6 +1,6 @@
-#include "camera/rvl_depth_wire.hpp"
+#include "realsense/rvl_depth_wire.hpp"
 
-#include "camera/wire_blob.hpp"
+#include "realsense/wire_blob.hpp"
 
 namespace kist {
 

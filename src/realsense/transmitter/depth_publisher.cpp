@@ -1,6 +1,6 @@
-#include "camera/depth_publisher.hpp"
+#include "realsense/transmitter/depth_publisher.hpp"
 
-#include "camera/rvl_depth_wire.hpp"
+#include "realsense/rvl_depth_wire.hpp"
 
 #include <unitree/idl/go2/VoxelMapCompressed_.hpp>
 #include <unitree/robot/channel/channel_factory.hpp>

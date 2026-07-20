@@ -1,8 +1,8 @@
 #pragma once
 
 #include "common/data_buffer.hpp"
-#include "camera/color_frame.hpp"
-#include "camera/depth_frame.hpp"
+#include "realsense/color_frame.hpp"
+#include "realsense/depth_frame.hpp"
 
 #include <atomic>
 #include <cstdint>

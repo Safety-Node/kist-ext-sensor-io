@@ -1,6 +1,6 @@
 #pragma once
 
-#include "camera/rvl_depth_frame.hpp"
+#include "realsense/rvl_depth_frame.hpp"
 
 #include <cstdint>
 #include <vector>

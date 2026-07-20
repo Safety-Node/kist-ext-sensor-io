@@ -7,10 +7,11 @@
 // With a display it opens a live window (ESC to quit); otherwise it
 // captures a few frames and writes a PNG of the last one.
 
-#include "camera/camera_capture.hpp"
-#include "camera/depth_publisher.hpp"
-#include "camera/depth_receiver.hpp"
-#include "camera/rvl_depth_codec.hpp"
+#include "realsense/transmitter/camera_capture.hpp"
+#include "realsense/transmitter/depth_publisher.hpp"
+#include "realsense/receiver/depth_receiver.hpp"
+#include "realsense/transmitter/rvl_depth_encoder.hpp"
+#include "realsense/receiver/rvl_depth_decoder.hpp"
 
 #include <opencv2/opencv.hpp>
 
