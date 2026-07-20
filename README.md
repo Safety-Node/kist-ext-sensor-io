@@ -63,33 +63,6 @@ cmake -B build && cmake --build build
 
 ## Run
 
-### Offline checks (no hardware)
-
-```bash
-./build/test_dwm_parse       # DWM lec line parser
-./build/test_uwb_loopback    # transmitter -> receiver over lo (full DDS roundtrip)
-```
-
-### Tx daemon (on the device machine)
-
-Starts every sensor enabled in the config — one process per machine:
-
-```bash
-./build/ext_sensor_io_tx       # reads config/config.yaml
-```
-
-Prints a once-per-second status line per sensor (`[uwb] rate= XHz
-pos=(...) quality=..`, or `no fix`). UWB publishes `rt/kist/uwb/pose`
-(`geometry_msgs/PoseStamped`) — visible to ROS2 tools as
-`/kist/uwb/pose`. Valid fixes only; the topic goes silent when the tag
-has no fix, and the daemon keeps retrying an unplugged device every 2s.
-
-### Live receive check (a running Tx daemon, same machine or across the network)
-
-```bash
-./build/test_uwb_receiver      # reads config/config.yaml
-```
-
 ## Usage
 
 Embedding the Rx side as a C++ library — one `start()` brings up every
