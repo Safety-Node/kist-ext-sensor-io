@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/data_buffer.hpp"
+#include "uwb/uwb_sample.hpp"
 
 #include <atomic>
 #include <optional>
@@ -10,12 +11,6 @@
 #include <vector>
 
 namespace kist {
-
-// One parsed DWM position line (Tx-side, before publishing).
-struct UwbSample {
-    float x = 0.0f, y = 0.0f, z = 0.0f;  // UWB local frame (m)
-    int   quality = 0;                   // DWM quality factor, 1-100
-};
 
 // ── pure parsing helpers (exposed for deterministic tests) ────────────
 //
@@ -43,9 +38,9 @@ std::vector<std::string> extract_lines(std::string& buf);
 // I/O error (physical disconnect) triggers a re-open, after a 2s wait.
 //
 // Same recovery structure as the onboard uwb_node's SerialTransport.
-class DwmSerial {
+class UwbSerialReader {
 public:
-    ~DwmSerial() { stop(); }
+    ~UwbSerialReader() { stop(); }
 
     void start(const std::string& port, int baud = 115200);
     void stop();

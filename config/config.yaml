@@ -9,6 +9,7 @@ unitree:
   network_interface: lo
 
 uwb:
+  enabled: true
   # Decawave DWM dongle (udev symlink — see README)
   serial_port: /dev/uwb
   serial_baud: 115200

@@ -70,39 +70,49 @@ cmake -B build && cmake --build build
 ./build/test_uwb_loopback    # transmitter -> receiver over lo (full DDS roundtrip)
 ```
 
-### UWB transmitter daemon (on the machine with the dongle)
+### Tx daemon (on the device machine)
+
+Starts every sensor enabled in the config — one process per machine:
 
 ```bash
-./build/uwb_transmitter        # reads config/config.yaml
+./build/ext_sensor_io_tx       # reads config/config.yaml
 ```
 
-Prints a once-per-second status line (`rate= XHz pos=(...) quality=..`,
-or `no fix`). Publishes `rt/kist/uwb/pose` (`geometry_msgs/PoseStamped`)
-— visible to ROS2 tools as `/kist/uwb/pose`. Valid fixes only; the topic
-goes silent when the tag has no fix.
+Prints a once-per-second status line per sensor (`[uwb] rate= XHz
+pos=(...) quality=..`, or `no fix`). UWB publishes `rt/kist/uwb/pose`
+(`geometry_msgs/PoseStamped`) — visible to ROS2 tools as
+`/kist/uwb/pose`. Valid fixes only; the topic goes silent when the tag
+has no fix, and the daemon keeps retrying an unplugged device every 2s.
+
+### Live receive check (a running Tx daemon, same machine or across the network)
+
+```bash
+./build/test_uwb_receiver      # reads config/config.yaml
+```
 
 ## Usage
 
-Embedding the receiver as a C++ library:
+Embedding the Rx side as a C++ library — one `start()` brings up every
+enabled sensor's Receiver; data access stays per sensor:
 
 ```cmake
 add_subdirectory(kist-ext-sensor-io)
-target_link_libraries(your_app PRIVATE uwb_io)
+target_link_libraries(your_app PRIVATE ext_sensor_io_rx)
 ```
 
 ```cpp
-#include "uwb/uwb_receiver.hpp"
+#include "system/ext_sensor_io_rx.hpp"
 
-auto& uwb = kist::UwbReceiver::instance();
-if (!uwb.start("config/config.yaml"))     // reads unitree.domain_id / network_interface
+auto& rx = kist::ExtSensorIoRx::instance();
+if (!rx.start("config/config.yaml"))      // reads unitree.* + per-sensor sections
     return 1;
 
 // consume by polling from any thread; empty buffer = no fix for 1s
-auto fix = uwb.uwb_buf.GetDataWithTime();
+auto fix = rx.uwb().uwb_buf.GetDataWithTime();
 if (fix.HasData())
     use(*fix.data);
 
-uwb.stop();
+rx.stop();
 ```
 
 Optional, before `start()`: react to every fix as it arrives (runs on the
@@ -110,8 +120,8 @@ DDS receive thread — keep it cheap). This is how an integrating wrapper
 forwards fixes into another module's passive buffer:
 
 ```cpp
-uwb.set_on_position([](const kist::UwbPosition& p) { /* forward p */ });
+rx.uwb().set_on_position([](const kist::UwbPosition& p) { /* forward p */ });
 ```
 
-`start(domain_id, network_interface)` is also available when the caller
-already loaded its own config.
+Single-sensor use is still available (`uwb_io` target,
+`UwbReceiver::instance().start(...)`) when the facade is too much.

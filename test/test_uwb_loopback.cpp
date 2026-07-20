@@ -3,7 +3,7 @@
 // name, PoseStamped_ IDL, QoS compatibility, stamp/position mapping,
 // and the set_on_position hook.
 
-#include "uwb/uwb_transmitter.hpp"
+#include "uwb/uwb_publisher.hpp"
 #include "uwb/uwb_receiver.hpp"
 
 #include <atomic>
@@ -34,8 +34,8 @@ int main() {
         return 1;
     }
 
-    UwbTransmitter publisher;
-    if (!publisher.start(0, "lo")) {
+    UwbPublisher publisher;
+    if (!publisher.start_channel(0, "lo")) {
         std::printf("FAILED to start publisher on lo\n");
         return 1;
     }

@@ -1,6 +1,7 @@
-#include "uwb/dwm_serial.hpp"
+#include "uwb/uwb_serial_reader.hpp"
 
 #include <fcntl.h>
+#include <pthread.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -83,7 +84,7 @@ speed_t to_speed(int baud) {
         case 57600:  return B57600;
         case 115200: return B115200;
         default:
-            throw std::invalid_argument("[DwmSerial] unsupported baud rate");
+            throw std::invalid_argument("[UwbSerialReader] unsupported baud rate");
     }
 }
 
@@ -93,7 +94,7 @@ void write_all(int fd, std::string_view data) {
         if (n < 0) {
             if (errno == EAGAIN || errno == EINTR)
                 continue;
-            throw std::runtime_error("[DwmSerial] serial write failed");
+            throw std::runtime_error("[UwbSerialReader] serial write failed");
         }
         data = data.substr(std::size_t(n));
     }
@@ -115,7 +116,7 @@ std::size_t read_pending(int fd, std::string& buf) {
             return total;
         if (errno == EINTR)
             continue;
-        throw std::runtime_error("[DwmSerial] serial read failed (disconnect?)");
+        throw std::runtime_error("[UwbSerialReader] serial read failed (disconnect?)");
     }
 }
 
@@ -126,17 +127,17 @@ bool contains_data(const std::string& buf) {
 
 } // namespace
 
-void DwmSerial::start(const std::string& port, int baud) {
+void UwbSerialReader::start(const std::string& port, int baud) {
     if (thread_.joinable())
         return;
     port_ = port;
     baud_ = baud;
     to_speed(baud);  // validate early, throws on bad config
     running_ = true;
-    thread_ = std::thread(&DwmSerial::reader_loop, this);
+    thread_ = std::thread(&UwbSerialReader::reader_loop, this);
 }
 
-void DwmSerial::stop() {
+void UwbSerialReader::stop() {
     running_ = false;
     if (thread_.joinable())
         thread_.join();
@@ -148,19 +149,20 @@ void DwmSerial::stop() {
 
 // Outer loop — open the port once, re-open only on I/O error
 // (physical disconnect), never on parse trouble.
-void DwmSerial::reader_loop() {
+void UwbSerialReader::reader_loop() {
     using namespace std::chrono_literals;
+    pthread_setname_np(pthread_self(), "uwb-serial-rd");  // visible in htop/gdb
 
     while (running_) {
         try {
             if (fd_ < 0) {
                 fd_ = ::open(port_.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
                 if (fd_ < 0)
-                    throw std::runtime_error("[DwmSerial] cannot open " + port_);
+                    throw std::runtime_error("[UwbSerialReader] cannot open " + port_);
 
                 termios tio{};
                 if (::tcgetattr(fd_, &tio) != 0)
-                    throw std::runtime_error("[DwmSerial] tcgetattr failed");
+                    throw std::runtime_error("[UwbSerialReader] tcgetattr failed");
                 ::cfmakeraw(&tio);
                 ::cfsetispeed(&tio, to_speed(baud_));
                 ::cfsetospeed(&tio, to_speed(baud_));
@@ -169,11 +171,11 @@ void DwmSerial::reader_loop() {
                 tio.c_cc[VMIN]  = 0;
                 tio.c_cc[VTIME] = 0;
                 if (::tcsetattr(fd_, TCSANOW, &tio) != 0)
-                    throw std::runtime_error("[DwmSerial] tcsetattr failed");
+                    throw std::runtime_error("[UwbSerialReader] tcsetattr failed");
 
                 std::this_thread::sleep_for(300ms);
                 handshake();
-                std::cout << "[DwmSerial] streaming on " << port_ << "\n";
+                std::cout << "[UwbSerialReader] streaming on " << port_ << "\n";
             }
             read_loop();
             return;  // stop() requested
@@ -193,7 +195,7 @@ void DwmSerial::reader_loop() {
 // already streaming -> nothing to do; at the prompt -> "lec"; otherwise
 // \r\r for the prompt (a stream appearing meanwhile is toggled off by
 // "lec" so the prompt shows), then "lec".
-void DwmSerial::handshake() {
+void UwbSerialReader::handshake() {
     using namespace std::chrono_literals;
     using clock = std::chrono::steady_clock;
 
@@ -224,7 +226,7 @@ void DwmSerial::handshake() {
             }
         }
         if (buf.find("dwm>") == std::string::npos)
-            throw std::runtime_error("[DwmSerial] failed to enter DWM shell");
+            throw std::runtime_error("[UwbSerialReader] failed to enter DWM shell");
     }
 
     write_all(fd_, "lec\r");
@@ -238,10 +240,10 @@ void DwmSerial::handshake() {
         if (contains_data(ack) || ack.find("dwm>") != std::string::npos)
             return;
     }
-    throw std::runtime_error("[DwmSerial] lec command not acknowledged");
+    throw std::runtime_error("[UwbSerialReader] lec command not acknowledged");
 }
 
-void DwmSerial::read_loop() {
+void UwbSerialReader::read_loop() {
     using namespace std::chrono_literals;
 
     std::string buf;

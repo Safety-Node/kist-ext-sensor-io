@@ -1,10 +1,13 @@
-// Live UWB stream check (a running uwb_transmitter needed, same DDS
-// domain — on the same machine or across the network):
+// Live UWB stream check (a running Tx daemon needed, same DDS domain —
+// on the same machine or across the network):
 //   ./test_uwb_receiver [config_path]
 // Interface/domain come from config/config.yaml. Prints position age,
 // receive rate, and coordinates once per second. Ctrl-C to stop.
+//
+// Goes through the ExtSensorIoRx facade, so this doubles as the
+// consumer-side assembly probe.
 
-#include "uwb/uwb_receiver.hpp"
+#include "system/ext_sensor_io_rx.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -24,9 +27,10 @@ int main(int argc, char** argv) {
 
     std::signal(SIGINT, [](int) { g_stop = true; });
 
-    auto& uwb = UwbReceiver::instance();
-    if (!uwb.start(config_path))
+    auto& rx = ExtSensorIoRx::instance();
+    if (!rx.start(config_path))
         return 1;
+    auto& uwb = rx.uwb();
 
     int64_t last_stamp = 0;
     int     received = 0;
@@ -57,6 +61,6 @@ int main(int argc, char** argv) {
         received = 0;
     }
 
-    uwb.stop();
+    rx.stop();
     return 0;
 }

@@ -4,7 +4,7 @@
 // rejection, malformed input, and \r\n line reassembly across
 // fragmented serial chunks.
 
-#include "uwb/dwm_serial.hpp"
+#include "uwb/uwb_serial_reader.hpp"
 
 #include <cstdio>
 
