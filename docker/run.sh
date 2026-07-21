@@ -21,6 +21,7 @@ else
     xhost +local:root >/dev/null 2>&1 || true
     docker run -it \
         --name "${CONTAINER}" \
+        --gpus all \
         --network host \
         --privileged \
         -v /dev:/dev \
