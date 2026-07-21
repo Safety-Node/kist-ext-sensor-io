@@ -38,6 +38,14 @@ int main(int argc, char** argv) {
     ccfg.color_height   = cam["color_height"].as<int>(480);
     ccfg.color_fps      = cam["color_fps"].as<int>(30);
     ccfg.align_to_color = cam["align_to_color"].as<bool>(true);
+    ccfg.depth_frame_id = cam["depth_frame_id"].as<std::string>("camera_depth");
+    ccfg.color_frame_id = cam["color_frame_id"].as<std::string>("camera_color");
+    if (const auto sf = cam["spatial_filter"]) {
+        ccfg.spatial_filter.enabled      = sf["enabled"].as<bool>(false);
+        ccfg.spatial_filter.magnitude    = sf["magnitude"].as<int>(2);
+        ccfg.spatial_filter.smooth_alpha = sf["smooth_alpha"].as<float>(0.5f);
+        ccfg.spatial_filter.smooth_delta = sf["smooth_delta"].as<float>(20.0f);
+    }
 
     H264EncoderConfig ecfg;
     ecfg.width             = ccfg.color_width;
@@ -45,6 +53,9 @@ int main(int argc, char** argv) {
     ecfg.fps               = ccfg.color_fps;
     ecfg.bitrate_kbps      = cam["color_bitrate_kbps"].as<int>(4000);
     ecfg.keyframe_interval = cam["color_keyframe_interval"].as<int>(30);
+    ecfg.preset            = cam["color_preset"].as<std::string>("ultrafast");
+    ecfg.tune              = cam["color_tune"].as<std::string>("zerolatency");
+    ecfg.profile           = cam["color_profile"].as<std::string>("baseline");
 
     std::signal(SIGINT,  [](int) { g_stop = true; });
     std::signal(SIGTERM, [](int) { g_stop = true; });

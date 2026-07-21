@@ -14,6 +14,15 @@ namespace rs2 { class pipeline; }
 
 namespace kist {
 
+// Optional RealSense spatial (edge-preserving) filter on depth. Disabled
+// unless enabled; params match librealsense's RS2_OPTION_FILTER_*.
+struct SpatialFilterConfig {
+    bool  enabled      = false;
+    int   magnitude    = 2;      // filter passes, 1..5
+    float smooth_alpha = 0.5f;   // neighbor weight, 0..1
+    float smooth_delta = 20.0f;  // depth-discontinuity tolerance (mm)
+};
+
 struct CameraCaptureConfig {
     int  depth_width  = 640;
     int  depth_height = 480;
@@ -25,6 +34,8 @@ struct CameraCaptureConfig {
     int  color_fps     = 30;
 
     bool align_to_color = true;  // reproject depth into the color frame
+
+    SpatialFilterConfig spatial_filter;
 
     std::string depth_frame_id = "camera_depth";
     std::string color_frame_id = "camera_color";

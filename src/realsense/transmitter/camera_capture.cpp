@@ -60,6 +60,15 @@ void CameraCapture::run() {
     if (config_.align_to_color)
         align.emplace(RS2_STREAM_COLOR);
 
+    std::optional<rs2::spatial_filter> spatial;
+    if (config_.spatial_filter.enabled) {
+        const auto& sf = config_.spatial_filter;
+        spatial.emplace();
+        spatial->set_option(RS2_OPTION_FILTER_MAGNITUDE,    float(sf.magnitude));
+        spatial->set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, sf.smooth_alpha);
+        spatial->set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, sf.smooth_delta);
+    }
+
     while (running_) {
         rs2::frameset frames;
         if (!pipe_->try_wait_for_frames(&frames, 100))
@@ -69,6 +78,8 @@ void CameraCapture::run() {
         rs2::frameset fs = align ? align->process(frames) : frames;
 
         if (rs2::depth_frame df = fs.get_depth_frame()) {
+            if (spatial)
+                df = spatial->process(df);
             const int w = df.get_width(), h = df.get_height();
             const int stride = df.get_stride_in_bytes(), size = df.get_data_size();
             if (w > 0 && h > 0 && stride > 0 && size > 0) {
