@@ -1,26 +1,20 @@
-// Full-pipeline visual check of BOTH streams (real RealSense). Captures
-// color+depth, runs color through H.264 and depth through RVL, each over
-// a DDS loopback (lo):
-//   capture -> encode -> publish -> DDS -> receive -> decode -> display
-// Shows a 2x2 panel: color original | H.264 decoded (top),
-// depth original | RVL decoded (bottom). Depth is lossless (bottom two
-// identical); color is lossy but near-identical.
+// Full-pipeline hardware test (real RealSense) of the rewired stack:
+//   CameraTransmitter (capture -> H.264/RVL encode -> publish typed DDS)
+//     -> lo -> CameraReceiver (receive typed DDS -> decode)
+// Exercises the merged encode-publishers + idlc typed messages + receivers
+// end to end with real frames. Shows color | depth (2x1); headless it
+// writes /tmp/realsense_view.png each second.
 //
-//   ./test_realsense_view [frames] [out.png]
+//   ./test_realsense_view [width height]   (default 640 480)
 
-#include "realsense/transmitter/camera_capture.hpp"
-#include "realsense/transmitter/h264_color_encoder.hpp"
-#include "realsense/transmitter/color_publisher.hpp"
-#include "realsense/transmitter/rvl_depth_encoder.hpp"
-#include "realsense/transmitter/depth_publisher.hpp"
-#include "realsense/receiver/h264_color_decoder.hpp"
-#include "realsense/receiver/color_receiver.hpp"
-#include "realsense/receiver/rvl_depth_decoder.hpp"
-#include "realsense/receiver/depth_receiver.hpp"
+#include "realsense/transmitter/camera_transmitter.hpp"
+#include "realsense/receiver/camera_receiver.hpp"
 
 #include <opencv2/opencv.hpp>
 
+#include <atomic>
 #include <chrono>
+#include <csignal>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -30,6 +24,8 @@
 
 using namespace kist;
 
+static std::atomic<bool> g_stop{false};
+
 static cv::Mat colorize_depth(const DepthFrame& d) {
     cv::Mat depth16(d.height, d.width, CV_16UC1, const_cast<uint8_t*>(d.data.data()));
     cv::Mat n8; depth16.convertTo(n8, CV_8UC1, 255.0 / 4000.0);
@@ -38,96 +34,66 @@ static cv::Mat colorize_depth(const DepthFrame& d) {
     return c;
 }
 
-static cv::Mat wait_new_depth(DepthReceiver& rx, int64_t stamp) {
-    const auto dl = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
-    while (std::chrono::steady_clock::now() < dl) {
-        auto g = rx.depth_buf.GetData();
-        if (g && g->stamp_ns == stamp) return colorize_depth(RvlDepthDecoder{}.decode(*g));
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    return {};
-}
-
 int main(int argc, char** argv) {
-    const int         frames   = (argc >= 2) ? std::atoi(argv[1]) : 120;
-    const std::string out_path = (argc >= 3) ? argv[2] : "/tmp/realsense_view.png";
-    const bool has_disp = [] { const char* d = std::getenv("DISPLAY"); return d && d[0]; }();
-
-    CameraCapture cam;
-    CameraCaptureConfig cfg;  // color + depth, aligned (real config)
-    if (!cam.start(cfg)) return 1;
-
-    auto& crx = ColorReceiver::instance();
-    auto& drx = DepthReceiver::instance();
-    if (!crx.start(0, "lo") || !drx.start(0, "lo")) return 1;
-    ColorPublisher ctx; DepthPublisher dtx;
-    if (!ctx.start(0, "lo") || !dtx.start(0, "lo")) return 1;
-
+    std::setvbuf(stdout, nullptr, _IOLBF, 0);
+    CameraCaptureConfig ccfg;
+    if (argc >= 3) {
+        ccfg.depth_width = ccfg.color_width = std::atoi(argv[1]);
+        ccfg.depth_height = ccfg.color_height = std::atoi(argv[2]);
+    }
+    ccfg.color_enabled = true;
     H264EncoderConfig ecfg;
-    ecfg.width = cfg.color_width; ecfg.height = cfg.color_height; ecfg.fps = cfg.color_fps;
-    H264ColorEncoder cenc(ecfg);
-    H264ColorDecoder cdec;
-    RvlDepthEncoder  denc;
+    ecfg.width = ccfg.color_width; ecfg.height = ccfg.color_height; ecfg.fps = ccfg.color_fps;
 
-    cv::Mat panel;
-    int shown = 0;
-    int64_t last_color_stamp = -1;
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(40);
+    const bool has_disp = [] { const char* d = std::getenv("DISPLAY"); return d && d[0]; }();
+    std::signal(SIGINT,  [](int) { g_stop = true; });
+    std::signal(SIGTERM, [](int) { g_stop = true; });
 
-    while (shown < frames && std::chrono::steady_clock::now() < deadline) {
-        auto color = cam.color_buf.GetData();
-        auto depth = cam.depth_buf.GetData();
-        if (!color || !depth || color->stamp_ns == last_color_stamp) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(2));
-            continue;
+    CameraReceiver rx;
+    if (!rx.start(0, "lo")) return 1;
+    CameraTransmitter tx;
+    if (!tx.start(0, "lo", ccfg, ecfg)) return 1;
+
+    int color_n = 0, depth_n = 0;
+    int64_t last_c = -1, last_d = -1;
+    auto window = std::chrono::steady_clock::now();
+
+    while (!g_stop) {
+        auto c = rx.color().GetData();
+        auto d = rx.depth().GetData();
+        if (c && c->stamp_ns != last_c) { last_c = c->stamp_ns; ++color_n; }
+        if (d && d->stamp_ns != last_d) { last_d = d->stamp_ns; ++depth_n; }
+
+        if (c && d) {
+            cv::Mat cm(c->height, c->width, CV_8UC3, const_cast<uint8_t*>(c->data.data()));
+            cv::Mat panel;
+            if (cm.rows == d->height)
+                cv::hconcat(std::vector<cv::Mat>{cm.clone(), colorize_depth(*d)}, panel);
+            else
+                panel = cm.clone();
+            if (has_disp) {
+                cv::imshow("realsense rx: color (H.264) | depth (RVL)", panel);
+                if (cv::waitKey(1) == 27) break;
+            }
         }
-        last_color_stamp = color->stamp_ns;
+        if (!has_disp) std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
-        // color: H.264 encode -> publish -> receive -> decode
-        auto cenc_f = cenc.encode(*color);
-        if (!cenc_f) continue;
-        ctx.publish(*cenc_f);
-
-        // depth: RVL encode -> publish
-        dtx.publish(denc.encode(*depth));
-
-        // receive both back
-        std::shared_ptr<const H264ColorFrame> crx_f;
-        const auto dl = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
-        while (std::chrono::steady_clock::now() < dl) {
-            crx_f = crx.color_buf.GetData();
-            if (crx_f && crx_f->stamp_ns == color->stamp_ns) break;
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
-        auto cdec_f = (crx_f) ? cdec.decode(*crx_f) : std::nullopt;
-        cv::Mat depth_dec = wait_new_depth(drx, depth->stamp_ns);
-        if (!cdec_f || depth_dec.empty()) continue;
-
-        // build 2x2 panel
-        cv::Mat c_orig(color->height, color->width, CV_8UC3, const_cast<uint8_t*>(color->data.data()));
-        cv::Mat c_dec(cdec_f->height, cdec_f->width, CV_8UC3, cdec_f->data.data());
-        cv::Mat d_orig = colorize_depth(*depth);
-        cv::Mat top, bot;
-        cv::hconcat(std::vector<cv::Mat>{c_orig.clone(), c_dec.clone()}, top);
-        cv::hconcat(std::vector<cv::Mat>{d_orig, depth_dec}, bot);
-        cv::putText(top, "color original", {10,30}, cv::FONT_HERSHEY_SIMPLEX, 0.8, {255,255,255}, 2);
-        cv::putText(top, "color H.264", {top.cols/2+10,30}, cv::FONT_HERSHEY_SIMPLEX, 0.8, {255,255,255}, 2);
-        cv::putText(bot, "depth original", {10,30}, cv::FONT_HERSHEY_SIMPLEX, 0.8, {255,255,255}, 2);
-        cv::putText(bot, "depth RVL", {bot.cols/2+10,30}, cv::FONT_HERSHEY_SIMPLEX, 0.8, {255,255,255}, 2);
-        cv::vconcat(std::vector<cv::Mat>{top, bot}, panel);
-        ++shown;
-
-        if (has_disp) {
-            cv::imshow("realsense: color (H.264) + depth (RVL) over DDS", panel);
-            if (cv::waitKey(1) == 27) break;
-        } else if (shown % 30 == 0) {
-            std::printf("frame %d  color %zuB  \n", shown, cenc_f->data.size());
+        const auto now = std::chrono::steady_clock::now();
+        if (now - window >= std::chrono::seconds(1)) {
+            window = now;
+            std::printf("received  color %2d fps  depth %2d fps  %s\n",
+                        color_n, depth_n, (c && d) ? "" : "(waiting)");
+            if (!has_disp && c && d) {
+                cv::Mat cm(c->height, c->width, CV_8UC3, const_cast<uint8_t*>(c->data.data()));
+                cv::Mat panel;
+                cv::hconcat(std::vector<cv::Mat>{cm.clone(), colorize_depth(*d)}, panel);
+                cv::imwrite("/tmp/realsense_view.png", panel);
+            }
+            color_n = depth_n = 0;
         }
     }
 
-    if (!panel.empty()) { cv::imwrite(out_path, panel); std::printf("wrote %s (%d frames)\n", out_path.c_str(), shown); }
-    else std::fprintf(stderr, "no frames\n");
-
-    cam.stop(); crx.stop(); drx.stop();
-    return panel.empty() ? 1 : 0;
+    tx.stop();
+    rx.stop();
+    return 0;
 }

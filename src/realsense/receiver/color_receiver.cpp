@@ -1,8 +1,7 @@
 #include "realsense/receiver/color_receiver.hpp"
 
-#include "realsense/h264_color_wire.hpp"
+#include "kist_camera_frames.hpp"  // idlc-generated
 
-#include <unitree/idl/go2/VoxelMapCompressed_.hpp>
 #include <unitree/robot/channel/channel_factory.hpp>
 #include <unitree/robot/channel/channel_subscriber.hpp>
 
@@ -49,9 +48,17 @@ void ColorReceiver::set_on_frame(OnFrameFn fn) {
 }
 
 void ColorReceiver::on_color_update(const void* message) {
-    const auto& msg = *static_cast<const unitree_go::msg::dds_::VoxelMapCompressed_*>(message);
+    const auto& msg = *static_cast<const kist_msgs::CompressedColorFrame*>(message);
 
-    H264ColorFrame frame = deserialize_color(msg.data());
+    H264ColorFrame frame;
+    frame.width       = int(msg.width());
+    frame.height      = int(msg.height());
+    frame.sequence    = msg.seq();
+    frame.stamp_ns    = msg.stamp_ns();
+    frame.is_keyframe = msg.is_keyframe();
+    frame.frame_id    = msg.frame_id();
+    frame.data        = msg.data();
+
     color_buf.SetData(H264ColorFrame(frame));
     if (on_frame_)
         on_frame_(frame);

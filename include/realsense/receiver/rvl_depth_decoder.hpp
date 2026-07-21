@@ -6,7 +6,7 @@
 namespace kist {
 
 // RVL lossless depth decoder — Rx side. Pure Module (no thread, no DDS):
-// RVL bitstream -> Z16 raw, the exact inverse of RvlDepthEncoder.
+// RVL bitstream -> Z16 raw, the exact inverse of RvlEncoder.
 class RvlDepthDecoder {
 public:
     DepthFrame decode(const RvlDepthFrame& frame) const;

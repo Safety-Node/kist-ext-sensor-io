@@ -26,13 +26,13 @@ struct H264EncoderConfig {
 // H.264 color encoder — Tx side, x264. Pure Module (no thread, no DDS):
 // BGR8 raw -> Annex-B NAL units. Ported from depth-cam-stream-codec.
 // Lossy, unlike the RVL depth codec.
-class H264ColorEncoder {
+class H264Encoder {
 public:
-    explicit H264ColorEncoder(const H264EncoderConfig& cfg);
-    ~H264ColorEncoder();
+    explicit H264Encoder(const H264EncoderConfig& cfg);
+    ~H264Encoder();
 
-    H264ColorEncoder(const H264ColorEncoder&)            = delete;
-    H264ColorEncoder& operator=(const H264ColorEncoder&) = delete;
+    H264Encoder(const H264Encoder&)            = delete;
+    H264Encoder& operator=(const H264Encoder&) = delete;
 
     std::optional<H264ColorFrame> encode(const ColorFrame& frame);
 

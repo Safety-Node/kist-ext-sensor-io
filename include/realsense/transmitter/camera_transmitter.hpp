@@ -3,7 +3,7 @@
 #include "realsense/transmitter/camera_capture.hpp"
 #include "realsense/transmitter/color_encode_publisher.hpp"
 #include "realsense/transmitter/depth_encode_publisher.hpp"
-#include "realsense/transmitter/h264_color_encoder.hpp"
+#include "realsense/transmitter/h264_encoder.hpp"
 
 #include <string>
 

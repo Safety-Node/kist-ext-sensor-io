@@ -12,17 +12,17 @@
 namespace unitree::robot {
 template <typename T> class ChannelSubscriber;
 }
-namespace unitree_go::msg::dds_ {
-class VoxelMapCompressed_;
+namespace kist_msgs {
+class CompressedDepthFrame;
 }
 
 namespace kist {
 
-// Rx half for compressed depth: subscribes to the DDS byte carrier,
-// deserializes back to an RvlDepthFrame, and publishes it to a buffer.
-// Deserialize is cheap, so it rides the DDS callback (like the UWB
-// receiver); RVL *decode* to a raw DepthFrame is left to the consumer /
-// a decode thread. Watchdog clears the buffer after 1s of silence.
+// Rx half for compressed depth: subscribes to the idlc-generated
+// kist_msgs::CompressedDepthFrame, maps it to an RvlDepthFrame, and
+// publishes it to a buffer. The mapping is cheap, so it rides the DDS
+// callback (like the UWB receiver); RVL *decode* to a raw DepthFrame is
+// left to the consumer / a decode thread. Watchdog clears after 1s.
 class DepthReceiver {
 public:
     static DepthReceiver& instance();
@@ -46,7 +46,7 @@ private:
 
     void watchdog_loop();
 
-    using Sub = unitree::robot::ChannelSubscriber<unitree_go::msg::dds_::VoxelMapCompressed_>;
+    using Sub = unitree::robot::ChannelSubscriber<kist_msgs::CompressedDepthFrame>;
     std::unique_ptr<Sub> sub_;
 
     std::thread       watchdog_thread_;

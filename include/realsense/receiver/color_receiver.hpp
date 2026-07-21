@@ -12,17 +12,17 @@
 namespace unitree::robot {
 template <typename T> class ChannelSubscriber;
 }
-namespace unitree_go::msg::dds_ {
-class VoxelMapCompressed_;
+namespace kist_msgs {
+class CompressedColorFrame;
 }
 
 namespace kist {
 
 // Rx half for compressed color — the color twin of DepthReceiver:
-// subscribes to the DDS byte carrier, deserializes to an H264ColorFrame,
-// publishes it to a buffer. Deserialize is cheap, so it rides the DDS
-// callback; H.264 *decode* is left to the consumer / a decode thread.
-// Watchdog clears the buffer after 1s of silence.
+// subscribes to the idlc-generated kist_msgs::CompressedColorFrame,
+// maps it to an H264ColorFrame, publishes it to a buffer. The mapping is
+// cheap, so it rides the DDS callback; H.264 *decode* is left to the
+// consumer / a decode thread. Watchdog clears the buffer after 1s.
 class ColorReceiver {
 public:
     static ColorReceiver& instance();
@@ -43,7 +43,7 @@ private:
 
     void watchdog_loop();
 
-    using Sub = unitree::robot::ChannelSubscriber<unitree_go::msg::dds_::VoxelMapCompressed_>;
+    using Sub = unitree::robot::ChannelSubscriber<kist_msgs::CompressedColorFrame>;
     std::unique_ptr<Sub> sub_;
 
     std::thread       watchdog_thread_;

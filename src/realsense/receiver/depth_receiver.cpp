@@ -1,8 +1,7 @@
 #include "realsense/receiver/depth_receiver.hpp"
 
-#include "realsense/rvl_depth_wire.hpp"
+#include "kist_camera_frames.hpp"  // idlc-generated
 
-#include <unitree/idl/go2/VoxelMapCompressed_.hpp>
 #include <unitree/robot/channel/channel_factory.hpp>
 #include <unitree/robot/channel/channel_subscriber.hpp>
 
@@ -52,9 +51,17 @@ void DepthReceiver::set_on_frame(OnFrameFn fn) {
 }
 
 void DepthReceiver::on_depth_update(const void* message) {
-    const auto& msg = *static_cast<const unitree_go::msg::dds_::VoxelMapCompressed_*>(message);
+    const auto& msg = *static_cast<const kist_msgs::CompressedDepthFrame*>(message);
 
-    RvlDepthFrame frame = deserialize_depth(msg.data());
+    RvlDepthFrame frame;
+    frame.width       = int(msg.width());
+    frame.height      = int(msg.height());
+    frame.sequence    = msg.seq();
+    frame.stamp_ns    = msg.stamp_ns();
+    frame.depth_scale = msg.depth_scale();
+    frame.frame_id    = msg.frame_id();
+    frame.data        = msg.data();
+
     depth_buf.SetData(RvlDepthFrame(frame));
     if (on_frame_)
         on_frame_(frame);

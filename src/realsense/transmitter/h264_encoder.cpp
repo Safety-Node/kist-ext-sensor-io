@@ -1,4 +1,4 @@
-#include "realsense/transmitter/h264_color_encoder.hpp"
+#include "realsense/transmitter/h264_encoder.hpp"
 
 #include <x264.h>
 
@@ -6,17 +6,17 @@
 
 namespace kist {
 
-H264ColorEncoder::H264ColorEncoder(const H264EncoderConfig& cfg) {
+H264Encoder::H264Encoder(const H264EncoderConfig& cfg) {
     pic_in_ = new x264_picture_t{};
     open(cfg);
 }
 
-H264ColorEncoder::~H264ColorEncoder() {
+H264Encoder::~H264Encoder() {
     close();
     delete pic_in_;
 }
 
-void H264ColorEncoder::open(const H264EncoderConfig& cfg) {
+void H264Encoder::open(const H264EncoderConfig& cfg) {
     cfg_ = cfg;
 
     x264_param_t param;
@@ -53,7 +53,7 @@ void H264ColorEncoder::open(const H264EncoderConfig& cfg) {
     frame_count_ = 0;
 }
 
-void H264ColorEncoder::close() {
+void H264Encoder::close() {
     if (encoder_) {
         x264_picture_clean(pic_in_);
         x264_encoder_close(encoder_);
@@ -61,12 +61,12 @@ void H264ColorEncoder::close() {
     }
 }
 
-void H264ColorEncoder::reset(const H264EncoderConfig& cfg) {
+void H264Encoder::reset(const H264EncoderConfig& cfg) {
     close();
     open(cfg);
 }
 
-std::optional<H264ColorFrame> H264ColorEncoder::encode(const ColorFrame& frame) {
+std::optional<H264ColorFrame> H264Encoder::encode(const ColorFrame& frame) {
     if (!encoder_) return std::nullopt;
 
     if (frame.width != cfg_.width || frame.height != cfg_.height) {
@@ -100,7 +100,7 @@ std::optional<H264ColorFrame> H264ColorEncoder::encode(const ColorFrame& frame) 
     return result;
 }
 
-void H264ColorEncoder::bgr8_to_i420(const uint8_t* bgr, int width, int height, int stride_bgr) {
+void H264Encoder::bgr8_to_i420(const uint8_t* bgr, int width, int height, int stride_bgr) {
     uint8_t*  y_plane  = pic_in_->img.plane[0];
     uint8_t*  u_plane  = pic_in_->img.plane[1];
     uint8_t*  v_plane  = pic_in_->img.plane[2];

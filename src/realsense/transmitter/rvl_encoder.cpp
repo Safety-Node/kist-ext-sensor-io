@@ -1,4 +1,4 @@
-#include "realsense/transmitter/rvl_depth_encoder.hpp"
+#include "realsense/transmitter/rvl_encoder.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -49,7 +49,7 @@ private:
 
 }  // namespace
 
-RvlDepthFrame RvlDepthEncoder::encode(const DepthFrame& frame) const {
+RvlDepthFrame RvlEncoder::encode(const DepthFrame& frame) const {
     const int pixel_count = frame.width * frame.height;
 
     // Flatten pixel array (handle stride padding).
