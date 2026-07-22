@@ -24,13 +24,10 @@ namespace kist {
 // UWB silence is a legitimate state (tag out of anchor range, or the
 // publisher dropped invalid fixes), so the watchdog clears the buffer
 // after 1s and consumers key off "has data" (empty-buffer principle).
-class UwbReceiver {
+class UwbSubscriber {
 public:
-    static UwbReceiver& instance();
-
-    // One-liner form: reads domain_id / network_interface from the
-    // config file's `unitree:` section (gearsonic-style facade).
-    bool start(const std::string& config_path = "config/config.yaml");
+    UwbSubscriber();
+    ~UwbSubscriber();
 
     bool start(int domain_id, const std::string& network_interface,
                const std::string& topic = kUwbPoseTopic);
@@ -51,8 +48,6 @@ public:
     void on_pose_update(const void* message);
 
 private:
-    UwbReceiver() = default;
-
     void watchdog_loop();
 
     using PoseSub = unitree::robot::ChannelSubscriber<geometry_msgs::msg::dds_::PoseStamped_>;

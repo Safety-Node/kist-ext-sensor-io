@@ -1,14 +1,14 @@
 #pragma once
 
-#include "uwb/uwb_publisher.hpp"
-#include "uwb/uwb_serial_reader.hpp"
+#include "uwb/transmitter/uwb_publisher.hpp"
+#include "uwb/transmitter/uwb_serial_reader.hpp"
 
 #include <string>
 
 namespace kist {
 
-// Tx half, self-contained (the mirror of UwbReceiver) — the assembly of
-// the two Tx threads, one class per thread:
+// UWB Tx assembly (the mirror of UwbReceiver in system/) — wires the two
+// Tx threads, one class per thread:
 //
 //   [UwbSerialReader]  /dev/uwb -> parse -> sample_buf
 //   [UwbPublisher]     sample_buf -> DDS rt/kist/uwb/pose

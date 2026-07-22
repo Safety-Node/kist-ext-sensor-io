@@ -41,18 +41,17 @@ else()
     message(STATUS "idlc not found (/opt/cyclonedds/bin) — IDL codegen unavailable")
 endif()
 
-# ─── uwb_io ───────────────────────────────────────────────────────────────────
-# UWB Tx/Rx, one class per thread: UwbSerialReader (serial -> samples)
-# + UwbPublisher (samples -> DDS) + UwbTransmitter (their assembly) +
-# UwbReceiver (DDS -> uwb_buf, set_on_position hook for wrapper wiring).
+# ─── uwb leaf units ───────────────────────────────────────────────────────────
+# One class per thread: UwbSerialReader (serial -> samples) + UwbPublisher
+# (samples -> DDS) on the Tx side, UwbSubscriber (DDS -> uwb_buf) on the Rx.
+# The Tx/Rx assemblies live in system/ (uwb_transmitter, uwb_receiver).
 add_library(uwb_io STATIC
-    src/uwb/uwb_serial_reader.cpp
-    src/uwb/uwb_transmitter.cpp
-    src/uwb/uwb_publisher.cpp
-    src/uwb/uwb_receiver.cpp
+    src/uwb/transmitter/uwb_serial_reader.cpp
+    src/uwb/transmitter/uwb_publisher.cpp
+    src/uwb/receiver/uwb_subscriber.cpp
 )
 target_include_directories(uwb_io PUBLIC include)
-target_link_libraries(uwb_io PUBLIC unitree_sdk2 yaml-cpp)
+target_link_libraries(uwb_io PUBLIC unitree_sdk2)
 
 # ─── realsense camera (ported from depth-cam-stream-codec, ROS2 stripped) ──────
 # Split by role, mirroring the include/realsense/{transmitter,receiver}
@@ -141,27 +140,18 @@ else()
     message(STATUS "libav missing — skipping realsense_receiver")
 endif()
 
-# ─── system facades ───────────────────────────────────────────────────────────
-# Tx: device-machine assembly (starts every enabled sensor's serial→DDS
-# chain). Rx: consumer-machine assembly (starts every enabled sensor's
-# Receiver; data access stays per sensor). One block per sensor inside.
-add_library(ext_sensor_io_tx STATIC
-    src/system/ext_sensor_io_tx.cpp
-)
-target_include_directories(ext_sensor_io_tx PUBLIC include)
-target_link_libraries(ext_sensor_io_tx PUBLIC uwb_io)
+# ─── UWB assemblies (embeddable libraries) ────────────────────────────────────
+# UwbTransmitter / UwbReceiver — own-no-thread assemblies (the mirror of the
+# RealSense ones). Consumers LINK these and use them in-process (Rx: read
+# fix()); the test_* runners below run them. yaml-free — config parsing lives
+# in the runners.
+add_library(uwb_transmitter STATIC src/system/uwb_transmitter.cpp)
+target_include_directories(uwb_transmitter PUBLIC include)
+target_link_libraries(uwb_transmitter PUBLIC uwb_io)
 
-add_library(ext_sensor_io_rx STATIC
-    src/system/ext_sensor_io_rx.cpp
-)
-target_include_directories(ext_sensor_io_rx PUBLIC include)
-target_link_libraries(ext_sensor_io_rx PUBLIC uwb_io)
-
-# ─── daemon ───────────────────────────────────────────────────────────────────
-# The Tx daemon: runs on the device machine (dongle/camera/mic side).
-add_executable(ext_sensor_io_tx_daemon src/main.cpp)
-set_target_properties(ext_sensor_io_tx_daemon PROPERTIES OUTPUT_NAME ext_sensor_io_tx)
-target_link_libraries(ext_sensor_io_tx_daemon PRIVATE ext_sensor_io_tx)
+add_library(uwb_receiver STATIC src/system/uwb_receiver.cpp)
+target_include_directories(uwb_receiver PUBLIC include)
+target_link_libraries(uwb_receiver PUBLIC uwb_io)
 
 # ─── tests ────────────────────────────────────────────────────────────────────
 # Standalone runners for the RealSense assemblies — read config.yaml, start
@@ -187,4 +177,12 @@ if(TARGET realsense_receiver AND OpenCV_FOUND)
         PRIVATE realsense_receiver yaml-cpp ${OpenCV_LIBS})
     target_include_directories(test_realsense_receiver_viewer PRIVATE ${OpenCV_INCLUDE_DIRS})
 endif()
+
+# UWB standalone runners — read config.yaml, run the assembly (Tx publishes
+# from the DWM dongle; Rx prints received fixes). Also the embedding reference.
+add_executable(test_uwb_transmitter test/test_uwb_transmitter.cpp)
+target_link_libraries(test_uwb_transmitter PRIVATE uwb_transmitter yaml-cpp)
+
+add_executable(test_uwb_receiver test/test_uwb_receiver.cpp)
+target_link_libraries(test_uwb_receiver PRIVATE uwb_receiver yaml-cpp)
 

@@ -2,7 +2,7 @@
 
 External (attached) sensor I/O for the KIST G1 stack, without ROS2: per sensor a DDS publisher (Tx, runs where the device is plugged in) and a reader library (Rx, embedded by consumers). Unitree built-in sensors are NOT here — they live with their consumers (e.g. kist-navigation-planner's `unitree_*_reader`).
 
-Sensors: UWB (Decawave DWM). Planned: camera, mic.
+Sensors: UWB (Decawave DWM), RealSense camera. Planned: mic.
 
 ## Architecture
 
@@ -61,40 +61,54 @@ differs.
 cmake -B build && cmake --build build
 ```
 
-## Run
-
 ## Usage
 
-Embedding the Rx side as a C++ library — one `start()` brings up every
-enabled sensor's Receiver; data access stays per sensor:
+Each sensor is a pair of own-no-thread **assemblies** — a `*Transmitter`
+(device side: read → encode → publish) and a `*Receiver` (consumer side:
+subscribe → decode → buffer). Link the assembly you need and drive it
+in-process; config parsing lives in the caller.
+
+### Embed the Rx side (consumer app)
 
 ```cmake
 add_subdirectory(kist-ext-sensor-io)
-target_link_libraries(your_app PRIVATE ext_sensor_io_rx)
+target_link_libraries(your_app PRIVATE uwb_receiver)   # and/or realsense_receiver
 ```
 
 ```cpp
-#include "system/ext_sensor_io_rx.hpp"
+#include "system/uwb_receiver.hpp"
 
-auto& rx = kist::ExtSensorIoRx::instance();
-if (!rx.start("config/config.yaml"))      // reads unitree.* + per-sensor sections
+kist::UwbReceiver rx;
+if (!rx.start(domain_id, network_interface))
     return 1;
 
-// consume by polling from any thread; empty buffer = no fix for 1s
-auto fix = rx.uwb().uwb_buf.GetDataWithTime();
+// poll from any thread; empty buffer = no fix for 1s (watchdog)
+auto fix = rx.fix().GetDataWithTime();
 if (fix.HasData())
     use(*fix.data);
 
 rx.stop();
 ```
 
-Optional, before `start()`: react to every fix as it arrives (runs on the
-DDS receive thread — keep it cheap). This is how an integrating wrapper
-forwards fixes into another module's passive buffer:
+RealSense is identical in shape — link `realsense_receiver`, then read
+`rx.color()` / `rx.depth()` for the decoded frames.
+
+Optional, before `start()`: react to every fix on arrival (runs on the DDS
+receive thread — keep it cheap):
 
 ```cpp
-rx.uwb().set_on_position([](const kist::UwbPosition& p) { /* forward p */ });
+rx.set_on_position([](const kist::UwbPosition& p) { /* forward p */ });
 ```
 
-Single-sensor use is still available (`uwb_io` target,
-`UwbReceiver::instance().start(...)`) when the facade is too much.
+### Run standalone (device / testing)
+
+Each assembly has a runner that reads `config/config.yaml`:
+
+```bash
+./test_uwb_transmitter                 # device:   DWM dongle -> DDS
+./test_uwb_receiver                    # consumer: prints received fixes
+
+./test_realsense_transmitter           # device:   D435i -> DDS
+./test_realsense_receiver              # consumer: prints fps
+./test_realsense_receiver_viewer       # consumer: shows color | depth
+```
