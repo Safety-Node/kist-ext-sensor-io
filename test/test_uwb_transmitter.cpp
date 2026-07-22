@@ -46,8 +46,33 @@ int main(int argc, char** argv) {
     std::printf("[test_uwb_transmitter] publishing on domain=%d iface=%s port=%s\n",
                 domain_id, iface.c_str(), port.c_str());
 
-    while (!g_stop)
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // Device-side status: poll the sample buffer and report the publish rate
+    // once per second. The library itself stays silent.
+    auto last_sample_time = std::chrono::steady_clock::time_point{};
+    int published = 0;
+    kist::UwbSample last{};
+    auto window = std::chrono::steady_clock::now();
+
+    while (!g_stop) {
+        auto s = tx.samples().GetDataWithTime();
+        if (s.HasData() && s.timestamp != last_sample_time) {
+            last_sample_time = s.timestamp;
+            last = *s.data;
+            ++published;
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+        if (now - window >= std::chrono::seconds(1)) {
+            window = now;
+            if (published > 0)
+                std::printf("[uwb] rate=%2dHz  pos=(%.2f, %.2f, %.2f)  quality=%d\n",
+                            published, last.x, last.y, last.z, last.quality);
+            else
+                std::printf("[uwb] no fix (nothing published)\n");
+            published = 0;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
 
     tx.stop();
     return 0;

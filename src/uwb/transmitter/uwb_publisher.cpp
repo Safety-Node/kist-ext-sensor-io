@@ -7,7 +7,6 @@
 #include <pthread.h>
 
 #include <chrono>
-#include <cstdio>
 #include <iostream>
 
 namespace kist {
@@ -29,9 +28,6 @@ bool UwbPublisher::start_channel(int domain_id, const std::string& network_inter
                   << network_interface << "\": " << e.what() << "\n";
         return false;
     }
-    std::cout << "[UwbPublisher] started on domain=" << domain_id
-              << " interface=" << network_interface
-              << " topic=" << topic << "\n";
     return true;
 }
 
@@ -77,30 +73,16 @@ void UwbPublisher::publish_loop(DataBuffer<UwbSample>* source, std::string frame
     using clock = std::chrono::steady_clock;
 
     auto last_sample_time = clock::time_point{};
-    auto window_start     = clock::now();
-    int  published_in_window = 0;
-    UwbSample last;
 
+    // Publish-on-new only; the library stays silent (device-side status is
+    // the runner's job — see test_uwb_transmitter).
     while (!stop_publish_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
         auto sample = source->GetDataWithTime();
         if (sample.HasData() && sample.timestamp != last_sample_time) {
             last_sample_time = sample.timestamp;
-            last = *sample.data;
-            publish(last, frame_id);
-            ++published_in_window;
-        }
-
-        if (clock::now() - window_start >= std::chrono::seconds(1)) {
-            window_start = clock::now();
-            if (published_in_window > 0) {
-                std::printf("[uwb] rate=%2dHz  pos=(%.2f, %.2f, %.2f)  quality=%d\n",
-                            published_in_window, last.x, last.y, last.z, last.quality);
-            } else {
-                std::printf("[uwb] no fix (nothing published)\n");
-            }
-            published_in_window = 0;
+            publish(*sample.data, frame_id);
         }
     }
 }

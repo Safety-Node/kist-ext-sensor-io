@@ -24,6 +24,10 @@ public:
                const std::string& topic = kUwbPoseTopic);
     void stop();
 
+    // Latest parsed sample — for device-side throughput monitoring (the
+    // library publishes silently; a runner can poll this to report a rate).
+    DataBuffer<UwbSample>& samples() { return serial_.sample_buf; }
+
 private:
     UwbSerialReader serial_;
     UwbPublisher    publisher_;
