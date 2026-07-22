@@ -3,12 +3,19 @@
 #include "common/data_buffer.hpp"
 #include "realsense/depth_frame.hpp"
 #include "realsense/rvl_depth_frame.hpp"
-#include "realsense/receiver/rvl_depth_decoder.hpp"
 
 #include <atomic>
 #include <thread>
 
 namespace kist {
+
+// RVL lossless depth decoder — Rx side. Pure Module (no thread, no DDS):
+// RVL bitstream -> Z16 raw, the exact inverse of RvlEncoder. Stateless, so
+// it's a plain owned member of the decode thread below.
+class RvlDepthDecoder {
+public:
+    DepthFrame decode(const RvlDepthFrame& frame) const;
+};
 
 // Rx thread (R2): polls a compressed-depth buffer, RVL-decodes new
 // frames, and publishes raw Z16 to `out`. Runs off the DDS receive

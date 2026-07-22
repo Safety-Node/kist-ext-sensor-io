@@ -1,4 +1,4 @@
-#include "realsense/transmitter/color_encode_publisher.hpp"
+#include "realsense/transmitter/depth_publisher.hpp"
 
 #include "kist_camera_frames.hpp"  // idlc-generated
 
@@ -12,67 +12,62 @@
 
 namespace kist {
 
-ColorEncodePublisher::ColorEncodePublisher() = default;
-ColorEncodePublisher::~ColorEncodePublisher() { stop(); }
+DepthPublisher::DepthPublisher() = default;
+DepthPublisher::~DepthPublisher() { stop(); }
 
-bool ColorEncodePublisher::start_channel(int domain_id, const std::string& network_interface,
-                                         const std::string& topic) {
+bool DepthPublisher::start_channel(int domain_id, const std::string& network_interface,
+                                   const std::string& topic) {
     try {
         // Safe when the embedding process already initialized the factory.
         unitree::robot::ChannelFactory::Instance()->Init(domain_id, network_interface);
         pub_.reset(new Pub(topic));
         pub_->InitChannel();
     } catch (const std::exception& e) {
-        std::cerr << "[ColorEncodePublisher] DDS init failed on interface \""
+        std::cerr << "[DepthPublisher] DDS init failed on interface \""
                   << network_interface << "\": " << e.what() << "\n";
         return false;
     }
     return true;
 }
 
-bool ColorEncodePublisher::start(int domain_id, const std::string& network_interface,
-                                 DataBuffer<ColorFrame>& source,
-                                 const H264EncoderConfig& enc_cfg,
-                                 const std::string& topic) {
+bool DepthPublisher::start(int domain_id, const std::string& network_interface,
+                           DataBuffer<DepthFrame>& source, const std::string& topic) {
     if (running_) return true;
     if (!start_channel(domain_id, network_interface, topic))
         return false;
     source_  = &source;
-    encoder_ = std::make_unique<H264Encoder>(enc_cfg);
     running_ = true;
-    thread_  = std::thread(&ColorEncodePublisher::run, this);
+    thread_  = std::thread(&DepthPublisher::run, this);
     return true;
 }
 
-void ColorEncodePublisher::stop() {
+void DepthPublisher::stop() {
     running_ = false;
     if (thread_.joinable())
         thread_.join();
-    encoder_.reset();
     pub_.reset();
 }
 
-void ColorEncodePublisher::publish(const H264ColorFrame& frame) {
-    kist_msgs::CompressedColorFrame msg;
+void DepthPublisher::publish(const RvlDepthFrame& frame) {
+    kist_msgs::CompressedDepthFrame msg;
     msg.width(uint32_t(frame.width));
     msg.height(uint32_t(frame.height));
     msg.seq(frame.sequence);
     msg.stamp_ns(frame.stamp_ns);
-    msg.is_keyframe(frame.is_keyframe);
+    msg.depth_scale(frame.depth_scale);
     msg.frame_id(frame.frame_id);
     msg.data(frame.data);
     pub_->Write(msg);
 }
 
-void ColorEncodePublisher::run() {
-    pthread_setname_np(pthread_self(), "rs-color-enc");
+void DepthPublisher::run() {
+    pthread_setname_np(pthread_self(), "rs-depth-enc");
     int64_t last_stamp = -1;
     while (running_) {
         auto frame = source_->GetData();
         if (frame && frame->stamp_ns != last_stamp) {
             last_stamp = frame->stamp_ns;
-            if (auto enc = encoder_->encode(*frame))
-                publish(*enc);
+            publish(encoder_.encode(*frame));
         } else {
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
         }

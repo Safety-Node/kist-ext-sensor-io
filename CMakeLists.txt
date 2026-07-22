@@ -67,12 +67,12 @@ add_library(realsense_rvl_encoder STATIC
 )
 target_include_directories(realsense_rvl_encoder PUBLIC include)
 
-# Rx: light decoders + DDS receivers (typed messages via kist_idl). The
-# heavy H.264 decoder (libav) is a separate target below.
+# Rx: the DDS subscribers (typed messages via kist_idl). The decoders now
+# live inside their decode threads (realsense_receiver) — the color one
+# carries the libav dep, so it's guarded there.
 add_library(realsense_rx STATIC
-    src/realsense/receiver/rvl_depth_decoder.cpp
-    src/realsense/receiver/depth_receiver.cpp
-    src/realsense/receiver/color_receiver.cpp
+    src/realsense/receiver/depth_subscriber.cpp
+    src/realsense/receiver/color_subscriber.cpp
 )
 target_include_directories(realsense_rx PUBLIC include)
 target_link_libraries(realsense_rx PUBLIC kist_idl unitree_sdk2)
@@ -106,29 +106,20 @@ else()
     message(STATUS "x264 not found — skipping realsense_h264_encoder (Tx color)")
 endif()
 
-# H.264 color decoder — Rx-only, libavcodec/libswscale. Guarded.
-if(LIBAV_FOUND)
-    add_library(realsense_h264_decoder STATIC
-        src/realsense/receiver/h264_color_decoder.cpp)
-    target_include_directories(realsense_h264_decoder PUBLIC include PRIVATE ${LIBAV_INCLUDE_DIRS})
-    target_link_libraries(realsense_h264_decoder PUBLIC ${LIBAV_LIBRARIES})
-    target_link_directories(realsense_h264_decoder PUBLIC ${LIBAV_LIBRARY_DIRS})
-else()
-    message(STATUS "libav not found — skipping realsense_h264_decoder (Rx color)")
-endif()
+# ─── RealSense camera assemblies (embeddable libraries) ───────────────────────
+# RealsenseTransmitter / RealsenseReceiver — own-no-thread assemblies that
+# wire + start/stop the Tx/Rx threads. Consumers LINK these and use them
+# in-process (Rx: read color()/depth()); the test_* executables below just
+# run them. Config parsing stays in the runners, so these libs are yaml-free.
 
-# ─── camera assemblies (threaded Tx/Rx, one class per thread) ──────────────────
-# CameraTransmitter needs capture (realsense2) + color encode (x264);
-# built only where both are available (the robot side).
+# Tx: capture (realsense2) + color encode (x264).
 if(realsense2_FOUND AND X264_FOUND)
     add_library(realsense_transmitter STATIC
-        src/realsense/transmitter/color_encode_publisher.cpp
-        src/realsense/transmitter/depth_encode_publisher.cpp
-        src/realsense/transmitter/camera_transmitter.cpp
+        src/system/realsense_transmitter.cpp
+        src/realsense/transmitter/color_publisher.cpp
+        src/realsense/transmitter/depth_publisher.cpp
     )
     target_include_directories(realsense_transmitter PUBLIC include)
-    # encode-publishers now do the DDS publish themselves -> need kist_idl
-    # (typed messages) + unitree_sdk2 directly, plus both encoders + capture.
     target_link_libraries(realsense_transmitter
         PUBLIC realsense_capture realsense_rvl_encoder realsense_h264_encoder
                kist_idl unitree_sdk2)
@@ -136,16 +127,16 @@ else()
     message(STATUS "realsense2 or x264 missing — skipping realsense_transmitter")
 endif()
 
-# CameraReceiver needs color decode (libav); depth decode is dep-free.
+# Rx: color decode (libav); depth decode (RVL) is dep-free.
 if(LIBAV_FOUND)
     add_library(realsense_receiver STATIC
-        src/realsense/receiver/color_decode_thread.cpp
-        src/realsense/receiver/depth_decode_thread.cpp
-        src/realsense/receiver/camera_receiver.cpp
+        src/system/realsense_receiver.cpp
+        src/realsense/receiver/color_decoder.cpp
+        src/realsense/receiver/depth_decoder.cpp
     )
-    target_include_directories(realsense_receiver PUBLIC include)
-    target_link_libraries(realsense_receiver
-        PUBLIC realsense_rx realsense_h264_decoder)
+    target_include_directories(realsense_receiver PUBLIC include PRIVATE ${LIBAV_INCLUDE_DIRS})
+    target_link_libraries(realsense_receiver PUBLIC realsense_rx ${LIBAV_LIBRARIES})
+    target_link_directories(realsense_receiver PUBLIC ${LIBAV_LIBRARY_DIRS})
 else()
     message(STATUS "libav missing — skipping realsense_receiver")
 endif()
@@ -194,13 +185,27 @@ if(CYCLONE_IDLC)
     target_link_libraries(test_idl_smoke PRIVATE kist_idl)
 endif()
 
-# Full-pipeline hardware test: CameraTransmitter -> lo -> CameraReceiver.
-# Needs the transmitter (realsense2+x264), receiver (libav), and OpenCV.
+# Standalone runners for the RealSense assemblies — read config.yaml, start
+# the assembly, and run (Tx publishes; Rx prints received fps). Run the two
+# together (same machine via lo, or two machines) to check the transport.
+# They also double as the reference for how to embed the assemblies.
+if(TARGET realsense_transmitter)
+    add_executable(test_realsense_transmitter test/test_realsense_transmitter.cpp)
+    target_link_libraries(test_realsense_transmitter PRIVATE realsense_transmitter yaml-cpp)
+endif()
+
+if(TARGET realsense_receiver)
+    add_executable(test_realsense_receiver test/test_realsense_receiver.cpp)
+    target_link_libraries(test_realsense_receiver PRIVATE realsense_receiver yaml-cpp)
+endif()
+
+# Visual variant of the Rx runner — shows color | depth (window, or PNG when
+# headless). Same embedding as test_realsense_receiver, plus OpenCV display.
 find_package(OpenCV QUIET)
-if(TARGET realsense_transmitter AND TARGET realsense_receiver AND OpenCV_FOUND)
-    add_executable(test_realsense_view test/test_realsense_view.cpp)
-    target_link_libraries(test_realsense_view
-        PRIVATE realsense_transmitter realsense_receiver ${OpenCV_LIBS})
-    target_include_directories(test_realsense_view PRIVATE ${OpenCV_INCLUDE_DIRS})
+if(TARGET realsense_receiver AND OpenCV_FOUND)
+    add_executable(test_realsense_receiver_viewer test/test_realsense_receiver_viewer.cpp)
+    target_link_libraries(test_realsense_receiver_viewer
+        PRIVATE realsense_receiver yaml-cpp ${OpenCV_LIBS})
+    target_include_directories(test_realsense_receiver_viewer PRIVATE ${OpenCV_INCLUDE_DIRS})
 endif()
 

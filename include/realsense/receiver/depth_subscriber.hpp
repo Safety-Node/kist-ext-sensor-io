@@ -23,9 +23,10 @@ namespace kist {
 // publishes it to a buffer. The mapping is cheap, so it rides the DDS
 // callback (like the UWB receiver); RVL *decode* to a raw DepthFrame is
 // left to the consumer / a decode thread. Watchdog clears after 1s.
-class DepthReceiver {
+class DepthSubscriber {
 public:
-    static DepthReceiver& instance();
+    DepthSubscriber();
+    ~DepthSubscriber();
 
     bool start(int domain_id, const std::string& network_interface,
                const std::string& topic = kCameraDepthTopic);
@@ -42,8 +43,6 @@ public:
     void on_depth_update(const void* message);
 
 private:
-    DepthReceiver() = default;
-
     void watchdog_loop();
 
     using Sub = unitree::robot::ChannelSubscriber<kist_msgs::CompressedDepthFrame>;

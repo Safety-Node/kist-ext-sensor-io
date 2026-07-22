@@ -19,14 +19,14 @@ class CompressedDepthFrame;
 
 namespace kist {
 
-// Tx thread (T3): polls a raw-depth buffer, RVL-encodes new frames, and
-// publishes them as typed DDS messages (kist_msgs::CompressedDepthFrame).
-// Owns the encoder Module and the DDS channel — the publish step is folded
-// in (no separate DepthPublisher). `source` must outlive this object.
-class DepthEncodePublisher {
+// Tx thread (T3): polls a raw-depth buffer, RVL-encodes new frames (via the
+// RvlEncoder Module — see rvl_encoder.hpp), and publishes them as typed DDS
+// messages (kist_msgs::CompressedDepthFrame). Encode and publish run
+// together in this one thread. `source` must outlive this object.
+class DepthPublisher {
 public:
-    DepthEncodePublisher();
-    ~DepthEncodePublisher();
+    DepthPublisher();
+    ~DepthPublisher();
 
     // Full pipeline: opens the DDS channel, then runs the encode+publish
     // worker off `source`.

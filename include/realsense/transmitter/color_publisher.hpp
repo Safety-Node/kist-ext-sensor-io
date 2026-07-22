@@ -19,14 +19,14 @@ class CompressedColorFrame;
 
 namespace kist {
 
-// Tx thread (T2): polls a raw-color buffer, H.264-encodes new frames, and
-// publishes them as typed DDS messages (kist_msgs::CompressedColorFrame).
-// Owns the encoder Module and the DDS channel — the publish step is folded
-// in (no separate ColorPublisher). `source` must outlive this object.
-class ColorEncodePublisher {
+// Tx thread (T2): polls a raw-color buffer, H.264-encodes new frames (via
+// the H264Encoder Module — see h264_encoder.hpp), and publishes them as
+// typed DDS messages (kist_msgs::CompressedColorFrame). Encode and publish
+// run together in this one thread. `source` must outlive this object.
+class ColorPublisher {
 public:
-    ColorEncodePublisher();
-    ~ColorEncodePublisher();
+    ColorPublisher();
+    ~ColorPublisher();
 
     // Full pipeline: opens the DDS channel, then runs the encode+publish
     // worker off `source`.
