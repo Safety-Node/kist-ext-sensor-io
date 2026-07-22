@@ -164,27 +164,6 @@ set_target_properties(ext_sensor_io_tx_daemon PROPERTIES OUTPUT_NAME ext_sensor_
 target_link_libraries(ext_sensor_io_tx_daemon PRIVATE ext_sensor_io_tx)
 
 # ─── tests ────────────────────────────────────────────────────────────────────
-# CameraCapture-only probe (no DDS/encode) — needs the RealSense.
-if(realsense2_FOUND)
-    add_executable(test_camera_capture test/test_camera_capture.cpp)
-    target_link_libraries(test_camera_capture PRIVATE realsense_capture)
-
-    # capture + encode (color H.264 + depth RVL), NO DDS — isolates
-    # encode/contention from publish. Needs x264 for the color encoder.
-    if(X264_FOUND)
-        add_executable(test_camera_encode test/test_camera_encode.cpp)
-        target_link_libraries(test_camera_encode
-            PRIVATE realsense_capture realsense_h264_encoder realsense_rvl_encoder)
-    endif()
-endif()
-
-# idlc smoke test: does an idlc-generated type work with the SDK's
-# ChannelPublisher? (verify before rewiring the real publishers)
-if(CYCLONE_IDLC)
-    add_executable(test_idl_smoke test/test_idl_smoke.cpp)
-    target_link_libraries(test_idl_smoke PRIVATE kist_idl)
-endif()
-
 # Standalone runners for the RealSense assemblies — read config.yaml, start
 # the assembly, and run (Tx publishes; Rx prints received fps). Run the two
 # together (same machine via lo, or two machines) to check the transport.
