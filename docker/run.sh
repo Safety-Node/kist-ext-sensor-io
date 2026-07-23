@@ -9,6 +9,10 @@
 #   --privileged -v /dev:/dev     RealSense USB + UWB serial (/dev/uwb)  [Tx]
 #   DISPLAY + /tmp/.X11-unix       OpenCV live windows                   [Rx]
 #
+# No GPU flag: this repo uses no CUDA (librealsense built with CUDA off, no
+# TensorRT). --gpus all would also break on Jetson (L4T wants --runtime nvidia).
+# If you ever compose with a CUDA image, add the platform-appropriate flag here.
+#
 # Iterative dev: add  -v "$(pwd)":/workspace/kist-ext-sensor-io  to shadow the
 # baked source with your working copy (then rebuild build/ inside).
 
@@ -24,7 +28,6 @@ else
     xhost +local:root >/dev/null 2>&1 || true
     docker run -it \
         --name "${CONTAINER}" \
-        --gpus all \
         --network host \
         --privileged \
         -v /dev:/dev \
