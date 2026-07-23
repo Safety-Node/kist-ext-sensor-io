@@ -3,14 +3,17 @@
 # Reuse across sessions so builds and caches survive until you explicitly
 # `docker rm kist-ext-sensor-io`.
 #
+# The image is self-contained (source baked in + built); no source mount.
 # Wired for BOTH roles from one image:
 #   --network host                DDS discovery/multicast (Tx<->Rx)
 #   --privileged -v /dev:/dev     RealSense USB + UWB serial (/dev/uwb)  [Tx]
 #   DISPLAY + /tmp/.X11-unix       OpenCV live windows                   [Rx]
+#
+# Iterative dev: add  -v "$(pwd)":/workspace/kist-ext-sensor-io  to shadow the
+# baked source with your working copy (then rebuild build/ inside).
 
 set -e
 
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTAINER=kist-ext-sensor-io
 
 if [ "$(docker ps -q -f name=^${CONTAINER}$)" ]; then
@@ -27,7 +30,6 @@ else
         -v /dev:/dev \
         -e DISPLAY="${DISPLAY}" \
         -v /tmp/.X11-unix:/tmp/.X11-unix \
-        -v "${REPO_DIR}:/workspace/kist-ext-sensor-io" \
         -w /workspace/kist-ext-sensor-io \
         kist-ext-sensor-io
 fi

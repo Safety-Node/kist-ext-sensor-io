@@ -1,0 +1,11 @@
+# Build artifacts — the container builds its own under build/.
+build/
+build-docker/
+
+# VCS / local
+.git/
+.gitignore
+
+# unitree_sdk2 is cloned inside the image (pinned), not copied from the host —
+# so the image needs no host-side vendoring. Keeps the build context small too.
+thirdparty/unitree_sdk2/

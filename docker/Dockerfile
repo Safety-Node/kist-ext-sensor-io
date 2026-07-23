@@ -1,13 +1,16 @@
 # kist-ext-sensor-io — all sensor-I/O deps in one image (both Tx and Rx
 # roles). Base matched to kist-gearsonic-inference so the two compose into
-# one orchestrated image later. The repo is bind-mounted at run time
-# (see run.sh) and built inside; this image only provides dependencies.
+# one orchestrated image later. The repo is copied in, unitree_sdk2 is cloned
+# (pinned) inside, and it's all built at image-build time — so the image is
+# self-contained: no host-side vendoring, no bind mount, no in-container setup.
+# `docker run` gives ready binaries. For iterative dev you can still shadow the
+# baked source with a bind mount (see run.sh comments).
 #
 #   deps by role:
 #     Tx (device machine): librealsense2 (RealSense), x264 (H.264 encode),
 #                          UWB serial via /dev (no lib)
 #     Rx (workstation):    libavcodec/util/swscale (H.264 decode), OpenCV
-#     both:                unitree_sdk2 (vendored, built from thirdparty),
+#     both:                unitree_sdk2 (cloned in-image, pinned),
 #                          yaml-cpp, idlc toolchain (custom DDS IDL types)
 FROM nvcr.io/nvidia/tensorrt:24.12-py3
 
@@ -80,5 +83,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /tmp/librealsense /var/lib/apt/lists/*
 
 WORKDIR /workspace/kist-ext-sensor-io
+
+# ─── vendored dep: unitree_sdk2 (cloned + pinned) ─────────────────────────────
+# Pinned to the commit the repo was validated against — its bundled libddscxx
+# 0.10.2 matches the idlc built above, so generated types stay ABI-compatible.
+# Cloned here (not host-vendored, not COPY'd — see .dockerignore) so the image
+# is fully self-sufficient. Placed before COPY so source edits don't re-clone.
+ARG UNITREE_SDK2_COMMIT=21d0a3b2c46ee48c8fdf2783becb6be3beb0a59b
+RUN git clone https://github.com/unitreerobotics/unitree_sdk2.git thirdparty/unitree_sdk2 && \
+    git -C thirdparty/unitree_sdk2 checkout "${UNITREE_SDK2_COMMIT}"
+
+# ─── source + build ───────────────────────────────────────────────────────────
+# Bake the repo in (build context = repo root, minus build/ .git & the SDK via
+# .dockerignore). Deps + SDK layers above stay cached; only this re-runs on a
+# source change.
+COPY . .
+RUN cmake -B build && cmake --build build -j"$(nproc)"
 
 CMD ["/bin/bash"]

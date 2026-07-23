@@ -10,38 +10,49 @@ Sensors: UWB (Decawave DWM), RealSense camera. Planned: mic.
 
 ## Dependencies
 
+All of these are provided by the Docker image (the recommended path below);
+the table is for host builds:
+
 | Package | Purpose |
 |---|---|
-| `unitree_sdk2` | DDS client library + ROS2 IDL types (PoseStamped) |
+| `unitree_sdk2` | DDS client + ROS2 IDL types (PoseStamped) |
+| CycloneDDS `idlc` 0.10.2 | codegen for the custom compressed-frame DDS types |
+| `librealsense2` | RealSense capture (camera Tx) |
+| `x264` / `libavcodec` | H.264 color encode (Tx) / decode (Rx) |
+| OpenCV | viewer probe (Rx) |
 | `yaml-cpp` | YAML config parser |
 
-## Installation
+## Quick start (Docker)
 
-### Clone Repository
+The image is self-contained — it clones `unitree_sdk2` (pinned) and builds the
+whole repo at image-build time. No host deps, no SDK vendoring, no bind mount.
 
 ```bash
 git clone https://github.com/Safety-Node/kist-ext-sensor-io.git
 cd kist-ext-sensor-io
+docker build -f docker/Dockerfile -t kist-ext-sensor-io .
+docker/run.sh            # opens a shell; prebuilt binaries live under build/
 ```
 
-All following steps run from the repository root.
+`run.sh` wires `--network host` (DDS discovery), `--privileged -v /dev`
+(RealSense USB + `/dev/uwb`), and X11 (the viewer). For iterative dev, bind-mount
+your working copy over the baked source — see the comments in `run.sh`.
 
-### Install unitree_sdk2
+## Host build (without Docker)
+
+Install the dependencies above, then — from the repository root:
 
 ```bash
+# vendored SDK (Docker does this for you; needed only for host builds)
 git clone https://github.com/unitreerobotics/unitree_sdk2.git thirdparty/unitree_sdk2
+
+cmake -B build && cmake --build build
 ```
 
-### Install yaml-cpp
+## UWB device setup (Tx machine)
 
-```bash
-sudo apt install libyaml-cpp-dev
-```
-
-### UWB udev rule (target machine)
-
-The DWM dongle (DWM1001-DEV: SEGGER J-Link OB, VID=1366 PID=0105) must
-appear as `/dev/uwb`:
+The DWM dongle (DWM1001-DEV: SEGGER J-Link OB, VID=1366 PID=0105) must appear
+as `/dev/uwb` on the host (Docker passes it through via `-v /dev`):
 
 ```bash
 echo 'SUBSYSTEM=="tty", ATTRS{idVendor}=="1366", ATTRS{idProduct}=="0105", SYMLINK+="uwb", MODE="0666"' \
@@ -49,17 +60,8 @@ echo 'SUBSYSTEM=="tty", ATTRS{idVendor}=="1366", ATTRS{idProduct}=="0105", SYMLI
 sudo udevadm control --reload && sudo udevadm trigger
 ```
 
-`MODE="0666"` lets the daemon run as a normal user (no dialout
-membership needed).
-
-Verify the IDs with `udevadm info /dev/ttyACM0 | grep ID_` if the dongle
-differs.
-
-## Build
-
-```bash
-cmake -B build && cmake --build build
-```
+`MODE="0666"` lets it run as a normal user. Verify the IDs with
+`udevadm info /dev/ttyACM0 | grep ID_` if the dongle differs.
 
 ## Usage
 
@@ -105,10 +107,10 @@ rx.set_on_position([](const kist::UwbPosition& p) { /* forward p */ });
 Each assembly has a runner that reads `config/config.yaml`:
 
 ```bash
-./test_uwb_transmitter                 # device:   DWM dongle -> DDS
-./test_uwb_receiver                    # consumer: prints received fixes
+./build/test_uwb_transmitter           # device:   DWM dongle -> DDS
+./build/test_uwb_receiver              # consumer: prints received fixes
 
-./test_realsense_transmitter           # device:   D435i -> DDS
-./test_realsense_receiver              # consumer: prints fps
-./test_realsense_receiver_viewer       # consumer: shows color | depth
+./build/test_realsense_transmitter     # device:   D435i -> DDS
+./build/test_realsense_receiver        # consumer: prints fps
+./build/test_realsense_receiver_viewer # consumer: shows color | depth
 ```
