@@ -1,8 +1,8 @@
 # kist-ext-sensor-io
 
-External (attached) sensor I/O for the KIST G1 stack, without ROS2: per sensor a DDS publisher (Tx, runs where the device is plugged in) and a reader library (Rx, embedded by consumers). Unitree built-in sensors are NOT here — they live with their consumers (e.g. kist-navigation-planner's `unitree_*_reader`).
+External (attached) sensor I/O for the KIST G1 stack
 
-Sensors: UWB (Decawave DWM). Planned: camera, mic.
+Sensors: UWB (Decawave DWM1001-dev), RealSense camera(D435i)
 
 ## Architecture
 
@@ -10,14 +10,19 @@ Sensors: UWB (Decawave DWM). Planned: camera, mic.
 
 ## Dependencies
 
-| Package | Purpose |
-|---|---|
-| `unitree_sdk2` | DDS client library + ROS2 IDL types (PoseStamped) |
-| `yaml-cpp` | YAML config parser |
+| Component | Version | Role |
+|---|---|---|
+| `unitree_sdk2` | `21d0a3b` | DDS client + ROS2 `PoseStamped` IDL |
+| CycloneDDS + CycloneDDS-CXX | 0.10.2 | `idlc`/`idlcxx` codegen for the custom DDS types |
+| `librealsense2` | 2.58.1 | RealSense capture |
+| x264 | distro | H.264 color encode |
+| FFmpeg / libav | distro | H.264 color decode |
+| OpenCV | distro | viewer probe |
+| `yaml-cpp` | distro | config parsing |
 
 ## Installation
 
-### Clone Repository
+#### 1. Clone Repository
 
 ```bash
 git clone https://github.com/Safety-Node/kist-ext-sensor-io.git
@@ -26,22 +31,70 @@ cd kist-ext-sensor-io
 
 All following steps run from the repository root.
 
-### Install unitree_sdk2
+#### Quick Start with Docker
+
+The image bakes in everything below (SDK, packages, libraries, and the build):
+
+```bash
+./docker/build.sh      # builds the image (docker build -t kist-ext-sensor-io)
+./docker/run.sh        # shell in the container; prebuilt binaries under build/
+```
+
+`run.sh` wires `--network host` (DDS), `--privileged -v /dev` (RealSense USB +
+`/dev/uwb`), and X11 (viewer). The numbered steps below are the manual
+(non-Docker) alternative; the UWB udev rule is host-side either way.
+
+#### 2. Install unitree_sdk2
 
 ```bash
 git clone https://github.com/unitreerobotics/unitree_sdk2.git thirdparty/unitree_sdk2
+git -C thirdparty/unitree_sdk2 checkout 21d0a3b2c46ee48c8fdf2783becb6be3beb0a59b
 ```
 
-### Install yaml-cpp
+#### 3. Install apt packages
 
 ```bash
-sudo apt install libyaml-cpp-dev
+sudo apt update && sudo apt install -y \
+    build-essential cmake git pkg-config \
+    libyaml-cpp-dev \
+    libx264-dev libavcodec-dev libavutil-dev libswscale-dev libopencv-dev \
+    libusb-1.0-0-dev libudev-dev libssl-dev
 ```
 
-### UWB udev rule (target machine)
+#### 4. Install CycloneDDS (idlc toolchain)
 
-The DWM dongle (DWM1001-DEV: SEGGER J-Link OB, VID=1366 PID=0105) must
-appear as `/dev/uwb`:
+CycloneDDS + CycloneDDS-CXX 0.10.2 into `/opt/cyclonedds`, pinned to match the
+SDK's bundled `libddscxx`:
+
+```bash
+git clone --depth 1 -b 0.10.2 https://github.com/eclipse-cyclonedds/cyclonedds.git /tmp/cyclonedds
+cmake -S /tmp/cyclonedds -B /tmp/cyclonedds/build \
+    -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds -DBUILD_IDLC=ON -DCMAKE_BUILD_TYPE=Release
+sudo cmake --build /tmp/cyclonedds/build --target install -j"$(nproc)"
+
+git clone --depth 1 -b 0.10.2 https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git /tmp/cyclonedds-cxx
+cmake -S /tmp/cyclonedds-cxx -B /tmp/cyclonedds-cxx/build \
+    -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds -DCMAKE_PREFIX_PATH=/opt/cyclonedds -DCMAKE_BUILD_TYPE=Release
+sudo cmake --build /tmp/cyclonedds-cxx/build --target install -j"$(nproc)"
+
+export PATH=/opt/cyclonedds/bin:$PATH      # idlc on PATH for Build
+```
+
+#### 5. Install librealsense2
+
+From source, library only (no examples / CUDA):
+
+```bash
+git clone --depth 1 -b v2.58.1 https://github.com/realsenseai/librealsense.git /tmp/librealsense
+cmake -S /tmp/librealsense -B /tmp/librealsense/build -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_EXAMPLES=false -DBUILD_GRAPHICAL_EXAMPLES=false -DBUILD_WITH_CUDA=false
+sudo cmake --build /tmp/librealsense/build --target install -j"$(nproc)" && sudo ldconfig
+```
+
+#### 6. UWB udev rule (optional)
+
+Convenience only — pins the DWM dongle (DWM1001-DEV: SEGGER J-Link OB,
+VID=1366 PID=0105) to a stable `/dev/uwb` and makes it user-accessible:
 
 ```bash
 echo 'SUBSYSTEM=="tty", ATTRS{idVendor}=="1366", ATTRS{idProduct}=="0105", SYMLINK+="uwb", MODE="0666"' \
@@ -49,79 +102,33 @@ echo 'SUBSYSTEM=="tty", ATTRS{idVendor}=="1366", ATTRS{idProduct}=="0105", SYMLI
 sudo udevadm control --reload && sudo udevadm trigger
 ```
 
-`MODE="0666"` lets the daemon run as a normal user (no dialout
-membership needed).
-
-Verify the IDs with `udevadm info /dev/ttyACM0 | grep ID_` if the dongle
-differs.
+Or skip it and point `uwb.serial_port` in `config/config.yaml` at the actual
+node (e.g. `/dev/ttyACM0`).
 
 ## Build
+
+With Docker, run this inside the container (`./docker/run.sh`).
 
 ```bash
 cmake -B build && cmake --build build
 ```
 
-## Run
-
-### Offline checks (no hardware)
-
-```bash
-./build/test_dwm_parse       # DWM lec line parser
-./build/test_uwb_loopback    # transmitter -> receiver over lo (full DDS roundtrip)
-```
-
-### Tx daemon (on the device machine)
-
-Starts every sensor enabled in the config — one process per machine:
-
-```bash
-./build/ext_sensor_io_tx       # reads config/config.yaml
-```
-
-Prints a once-per-second status line per sensor (`[uwb] rate= XHz
-pos=(...) quality=..`, or `no fix`). UWB publishes `rt/kist/uwb/pose`
-(`geometry_msgs/PoseStamped`) — visible to ROS2 tools as
-`/kist/uwb/pose`. Valid fixes only; the topic goes silent when the tag
-has no fix, and the daemon keeps retrying an unplugged device every 2s.
-
-### Live receive check (a running Tx daemon, same machine or across the network)
-
-```bash
-./build/test_uwb_receiver      # reads config/config.yaml
-```
-
 ## Usage
 
-Embedding the Rx side as a C++ library — one `start()` brings up every
-enabled sensor's Receiver; data access stays per sensor:
+Run the standalone binaries — each reads `config/config.yaml` (see
+[docs/configuration.md](docs/configuration.md) for the fields). Run a transmitter
+on the machine with the sensor, and a receiver anywhere on the same DDS domain to
+check reception:
 
-```cmake
-add_subdirectory(kist-ext-sensor-io)
-target_link_libraries(your_app PRIVATE ext_sensor_io_rx)
+```bash
+# device side (sensor plugged in) — publish
+./build/test_uwb_transmitter            # DWM dongle -> DDS
+./build/test_realsense_transmitter      # D435i      -> DDS
+
+# consumer side — subscribe
+./build/test_uwb_receiver               # prints received fixes
+./build/test_realsense_receiver         # prints received fps
+./build/test_realsense_receiver_viewer  # shows color | depth (OpenCV window)
 ```
 
-```cpp
-#include "system/ext_sensor_io_rx.hpp"
-
-auto& rx = kist::ExtSensorIoRx::instance();
-if (!rx.start("config/config.yaml"))      // reads unitree.* + per-sensor sections
-    return 1;
-
-// consume by polling from any thread; empty buffer = no fix for 1s
-auto fix = rx.uwb().uwb_buf.GetDataWithTime();
-if (fix.HasData())
-    use(*fix.data);
-
-rx.stop();
-```
-
-Optional, before `start()`: react to every fix as it arrives (runs on the
-DDS receive thread — keep it cheap). This is how an integrating wrapper
-forwards fixes into another module's passive buffer:
-
-```cpp
-rx.uwb().set_on_position([](const kist::UwbPosition& p) { /* forward p */ });
-```
-
-Single-sensor use is still available (`uwb_io` target,
-`UwbReceiver::instance().start(...)`) when the facade is too much.
+To embed a receiver as a library in your own app, see [docs/embedding.md](docs/embedding.md).

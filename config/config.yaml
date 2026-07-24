@@ -15,3 +15,31 @@ uwb:
   serial_baud: 115200
   # frame_id stamped on published fixes (UWB local frame)
   frame_id: map
+
+camera:
+  enabled: true
+
+  # RealSense capture — depth (Z16) + color (BGR8)
+  depth_width: 640
+  depth_height: 480
+  depth_fps: 30
+  color_width: 640
+  color_height: 480
+  color_fps: 30
+  align_to_color: true         # reproject depth into the color frame
+  depth_frame_id: camera_depth
+  color_frame_id: camera_color
+
+  # Depth spatial (edge-preserving) filter — disable to skip
+  spatial_filter:
+    enabled: true
+    magnitude: 2                 # filter passes, 1..5
+    smooth_alpha: 0.5            # neighbor weight, 0..1
+    smooth_delta: 20.0           # depth-discontinuity tolerance (mm)
+
+  # H.264 color encoder (x264)
+  color_bitrate_kbps: 4000
+  color_keyframe_interval: 30    # IDR every N frames (= fps -> 1/s)
+  color_preset: ultrafast        # ultrafast..placebo (speed vs size)
+  color_tune: zerolatency        # real-time streaming
+  color_profile: baseline        # widest compatibility, no B-frames

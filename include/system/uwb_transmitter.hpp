@@ -1,14 +1,14 @@
 #pragma once
 
-#include "uwb/uwb_publisher.hpp"
-#include "uwb/uwb_serial_reader.hpp"
+#include "uwb/transmitter/uwb_publisher.hpp"
+#include "uwb/transmitter/uwb_serial_reader.hpp"
 
 #include <string>
 
 namespace kist {
 
-// Tx half, self-contained (the mirror of UwbReceiver) — the assembly of
-// the two Tx threads, one class per thread:
+// UWB Tx assembly (the mirror of UwbReceiver in system/) — wires the two
+// Tx threads, one class per thread:
 //
 //   [UwbSerialReader]  /dev/uwb -> parse -> sample_buf
 //   [UwbPublisher]     sample_buf -> DDS rt/kist/uwb/pose
@@ -23,6 +23,10 @@ public:
                const std::string& frame_id,
                const std::string& topic = kUwbPoseTopic);
     void stop();
+
+    // Latest parsed sample — for device-side throughput monitoring (the
+    // library publishes silently; a runner can poll this to report a rate).
+    DataBuffer<UwbSample>& samples() { return serial_.sample_buf; }
 
 private:
     UwbSerialReader serial_;

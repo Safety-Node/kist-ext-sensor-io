@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common/data_buffer.hpp"
-#include "uwb/uwb_sample.hpp"
+#include "uwb/transmitter/uwb_sample.hpp"
 
 #include <atomic>
 #include <optional>
