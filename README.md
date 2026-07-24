@@ -115,7 +115,8 @@ cmake -B build && cmake --build build
 
 ## Usage
 
-Run the standalone binaries — each reads `config/config.yaml`. Run a transmitter
+Run the standalone binaries — each reads `config/config.yaml` (see
+[docs/configuration.md](docs/configuration.md) for the fields). Run a transmitter
 on the machine with the sensor, and a receiver anywhere on the same DDS domain to
 check reception:
 
