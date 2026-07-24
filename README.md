@@ -115,52 +115,60 @@ cmake -B build && cmake --build build
 
 ## Usage
 
-Each sensor is a pair of own-no-thread **assemblies** — a `*Transmitter`
-(device side: read → encode → publish) and a `*Receiver` (consumer side:
-subscribe → decode → buffer). Link the assembly you need and drive it
-in-process; config parsing lives in the caller.
+A sensor spans two sides:
 
-### Embed the Rx side (consumer app)
+- **Transmitter** — on the **device side** (where the sensor is plugged in):
+  reads the device → encodes → publishes over DDS.
+- **Receiver** — on the **consumer side** (your app): subscribes → decodes →
+  writes the latest frame/fix into a buffer you poll.
+
+Both are own-no-thread assemblies — they wire and start/stop the worker threads;
+you keep the process alive and read the buffers. `domain_id` / `network_interface`
+must match on both sides.
+
+### Embed the Receiver in your app
+
+Link the receiver you need and read it in-process:
 
 ```cmake
 add_subdirectory(kist-ext-sensor-io)
-target_link_libraries(your_app PRIVATE uwb_receiver)   # and/or realsense_receiver
+target_link_libraries(your_app PRIVATE realsense_receiver)   # and/or uwb_receiver
 ```
 
 ```cpp
-#include "system/uwb_receiver.hpp"
+#include "system/realsense_receiver.hpp"
 
-kist::UwbReceiver rx;
+kist::RealsenseReceiver rx;
 if (!rx.start(domain_id, network_interface))
     return 1;
 
-// poll from any thread; empty buffer = no fix for 1s (watchdog)
-auto fix = rx.fix().GetDataWithTime();
-if (fix.HasData())
-    use(*fix.data);
+// poll from any thread; empty buffer = no live frame (1s watchdog)
+auto color = rx.color().GetData();   // decoded BGR8
+auto depth = rx.depth().GetData();   // decoded Z16
 
 rx.stop();
 ```
 
-RealSense is identical in shape — link `realsense_receiver`, then read
-`rx.color()` / `rx.depth()` for the decoded frames.
-
-Optional, before `start()`: react to every fix on arrival (runs on the DDS
-receive thread — keep it cheap):
+UWB is the same shape — link `uwb_receiver`, then `rx.fix()` for the latest
+position. `UwbReceiver` also takes a hook to fire on each new fix instead of
+polling (runs on the DDS thread — keep it cheap):
 
 ```cpp
 rx.set_on_position([](const kist::UwbPosition& p) { /* forward p */ });
 ```
 
-### Run standalone (device / testing)
+### Run standalone (device + testing)
 
-Each assembly has a runner that reads `config/config.yaml`:
+Each assembly also has a runner that reads `config/config.yaml` — run the
+transmitter on the device, the receiver anywhere to check reception:
 
 ```bash
-./build/test_uwb_transmitter           # device:   DWM dongle -> DDS
-./build/test_uwb_receiver              # consumer: prints received fixes
+# device side (sensor plugged in) — publish
+./build/test_uwb_transmitter            # DWM dongle -> DDS
+./build/test_realsense_transmitter      # D435i      -> DDS
 
-./build/test_realsense_transmitter     # device:   D435i -> DDS
-./build/test_realsense_receiver        # consumer: prints fps
-./build/test_realsense_receiver_viewer # consumer: shows color | depth
+# consumer side — subscribe
+./build/test_uwb_receiver               # prints received fixes
+./build/test_realsense_receiver         # prints received fps
+./build/test_realsense_receiver_viewer  # shows color | depth (OpenCV window)
 ```
