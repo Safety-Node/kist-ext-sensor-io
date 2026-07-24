@@ -115,53 +115,9 @@ cmake -B build && cmake --build build
 
 ## Usage
 
-A sensor spans two sides:
-
-- **Transmitter** — on the **device side** (where the sensor is plugged in):
-  reads the device → encodes → publishes over DDS.
-- **Receiver** — on the **consumer side** (your app): subscribes → decodes →
-  writes the latest frame/fix into a buffer you poll.
-
-`start()` spins up the background receive/decode threads and returns; your code
-then just **polls the buffer** for the latest value and calls `stop()` when done
-(keep the process alive in between). Tx and Rx find each other over DDS only if
-they share the same `domain_id` and sit on the same network (`network_interface`).
-
-### Embed the Receiver in your app
-
-Link the receiver you need and read it in-process:
-
-```cmake
-add_subdirectory(kist-ext-sensor-io)
-target_link_libraries(your_app PRIVATE realsense_receiver)   # and/or uwb_receiver
-```
-
-```cpp
-#include "system/realsense_receiver.hpp"
-
-kist::RealsenseReceiver rx;
-if (!rx.start(domain_id, network_interface))
-    return 1;
-
-// poll from any thread; empty buffer = no live frame (1s watchdog)
-auto color = rx.color().GetData();   // decoded BGR8
-auto depth = rx.depth().GetData();   // decoded Z16
-
-rx.stop();
-```
-
-UWB is the same shape — link `uwb_receiver`, then `rx.fix()` for the latest
-position. `UwbReceiver` also takes a hook to fire on each new fix instead of
-polling (runs on the DDS thread — keep it cheap):
-
-```cpp
-rx.set_on_position([](const kist::UwbPosition& p) { /* forward p */ });
-```
-
-### Run standalone (device + testing)
-
-Each assembly also has a runner that reads `config/config.yaml` — run the
-transmitter on the device, the receiver anywhere to check reception:
+Run the standalone binaries — each reads `config/config.yaml`. Run a transmitter
+on the machine with the sensor, and a receiver anywhere on the same DDS domain to
+check reception:
 
 ```bash
 # device side (sensor plugged in) — publish
@@ -173,3 +129,5 @@ transmitter on the device, the receiver anywhere to check reception:
 ./build/test_realsense_receiver         # prints received fps
 ./build/test_realsense_receiver_viewer  # shows color | depth (OpenCV window)
 ```
+
+To embed a receiver as a library in your own app, see [docs/embedding.md](docs/embedding.md).
