@@ -91,10 +91,10 @@ cmake -S /tmp/librealsense -B /tmp/librealsense/build -DCMAKE_BUILD_TYPE=Release
 sudo cmake --build /tmp/librealsense/build --target install -j"$(nproc)" && sudo ldconfig
 ```
 
-#### 6. UWB udev rule (Tx machine)
+#### 6. UWB udev rule (optional)
 
-The DWM dongle (DWM1001-DEV: SEGGER J-Link OB, VID=1366 PID=0105) must appear
-as `/dev/uwb` (Docker passes it through via `-v /dev`):
+Convenience only — pins the DWM dongle (DWM1001-DEV: SEGGER J-Link OB,
+VID=1366 PID=0105) to a stable `/dev/uwb` and makes it user-accessible:
 
 ```bash
 echo 'SUBSYSTEM=="tty", ATTRS{idVendor}=="1366", ATTRS{idProduct}=="0105", SYMLINK+="uwb", MODE="0666"' \
@@ -102,8 +102,8 @@ echo 'SUBSYSTEM=="tty", ATTRS{idVendor}=="1366", ATTRS{idProduct}=="0105", SYMLI
 sudo udevadm control --reload && sudo udevadm trigger
 ```
 
-`MODE="0666"` lets it run as a normal user. Verify with
-`udevadm info /dev/ttyACM0 | grep ID_` if the dongle differs.
+Or skip it and point `uwb.serial_port` in `config/config.yaml` at the actual
+node (e.g. `/dev/ttyACM0`).
 
 ## Build
 
