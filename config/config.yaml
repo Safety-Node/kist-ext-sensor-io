@@ -20,11 +20,11 @@ camera:
   enabled: true
 
   # RealSense capture — depth (Z16) + color (BGR8)
-  depth_width: 1280
-  depth_height: 720
+  depth_width: 640
+  depth_height: 480
   depth_fps: 30
-  color_width: 1280
-  color_height: 720
+  color_width: 640
+  color_height: 480
   color_fps: 30
   align_to_color: true         # reproject depth into the color frame
   depth_frame_id: camera_depth
