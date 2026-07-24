@@ -22,7 +22,7 @@ Sensors: UWB (Decawave DWM1001-dev), RealSense camera(D435i)
 
 ## Installation
 
-### Clone Repository
+#### 1. Clone Repository
 
 ```bash
 git clone https://github.com/Safety-Node/kist-ext-sensor-io.git
@@ -37,14 +37,14 @@ build) — `docker build -f docker/Dockerfile -t kist-ext-sensor-io .`, then
 manual steps below are for a non-Docker host build; the UWB udev rule is
 host-side either way.
 
-### Install unitree_sdk2
+#### 2. Install unitree_sdk2
 
 ```bash
 git clone https://github.com/unitreerobotics/unitree_sdk2.git thirdparty/unitree_sdk2
 git -C thirdparty/unitree_sdk2 checkout 21d0a3b2c46ee48c8fdf2783becb6be3beb0a59b
 ```
 
-### Install apt packages
+#### 3. Install apt packages
 
 ```bash
 sudo apt update && sudo apt install -y \
@@ -54,7 +54,7 @@ sudo apt update && sudo apt install -y \
     libusb-1.0-0-dev libudev-dev libssl-dev
 ```
 
-### Install CycloneDDS (idlc toolchain)
+#### 4. Install CycloneDDS (idlc toolchain)
 
 CycloneDDS + CycloneDDS-CXX 0.10.2 into `/opt/cyclonedds`, pinned to match the
 SDK's bundled `libddscxx`:
@@ -73,7 +73,7 @@ sudo cmake --build /tmp/cyclonedds-cxx/build --target install -j"$(nproc)"
 export PATH=/opt/cyclonedds/bin:$PATH      # idlc on PATH for Build
 ```
 
-### Install librealsense2
+#### 5. Install librealsense2
 
 From source, library only (no examples / CUDA):
 
@@ -84,7 +84,7 @@ cmake -S /tmp/librealsense -B /tmp/librealsense/build -DCMAKE_BUILD_TYPE=Release
 sudo cmake --build /tmp/librealsense/build --target install -j"$(nproc)" && sudo ldconfig
 ```
 
-### UWB udev rule (Tx machine)
+#### 6. UWB udev rule (Tx machine)
 
 The DWM dongle (DWM1001-DEV: SEGGER J-Link OB, VID=1366 PID=0105) must appear
 as `/dev/uwb` (Docker passes it through via `-v /dev`):
