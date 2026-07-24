@@ -1,8 +1,8 @@
 # kist-ext-sensor-io
 
-External (attached) sensor I/O for the KIST G1 stack, without ROS2: per sensor a DDS publisher (Tx, runs where the device is plugged in) and a reader library (Rx, embedded by consumers). Unitree built-in sensors are NOT here — they live with their consumers (e.g. kist-navigation-planner's `unitree_*_reader`).
+External (attached) sensor I/O for the KIST G1 stack
 
-Sensors: UWB (Decawave DWM), RealSense camera. Planned: mic.
+Sensors: UWB (Decawave DWM1001-dev), RealSense camera(D435i)
 
 ## Architecture
 
@@ -10,17 +10,19 @@ Sensors: UWB (Decawave DWM), RealSense camera. Planned: mic.
 
 ## Dependencies
 
-All of these are provided by the Docker image (the recommended path below);
-the table is for host builds:
+The Docker image (recommended path below) installs all of these for you. The
+table + host-install steps are only for building **without** Docker (Ubuntu).
 
-| Package | Purpose |
-|---|---|
-| `unitree_sdk2` | DDS client + ROS2 IDL types (PoseStamped) |
-| CycloneDDS `idlc` 0.10.2 | codegen for the custom compressed-frame DDS types |
-| `librealsense2` | RealSense capture (camera Tx) |
-| `x264` / `libavcodec` | H.264 color encode (Tx) / decode (Rx) |
-| OpenCV | viewer probe (Rx) |
-| `yaml-cpp` | YAML config parser |
+| Component | Version | Role | How it's obtained |
+|---|---|---|---|
+| `unitree_sdk2` | pinned `21d0a3b` | both — DDS client + ROS2 `PoseStamped` IDL; bundles the CycloneDDS 0.10.2 runtime libs | vendored under `thirdparty/` (git clone) |
+| CycloneDDS + CycloneDDS-CXX | 0.10.2 | build-time — `idlc`/`idlcxx` codegen for the custom compressed-frame types (pinned to match the SDK's bundled `libddscxx`) | source → `/opt/cyclonedds` |
+| `librealsense2` | v2.58.1 | Tx — RealSense capture | source (library only, CUDA off) |
+| x264 | distro | Tx — H.264 color encode | apt `libx264-dev` |
+| FFmpeg / libav | distro | Rx — H.264 color decode | apt `libavcodec-dev libavutil-dev libswscale-dev` |
+| OpenCV | distro | Rx — viewer probe only (`test_realsense_receiver_viewer`) | apt `libopencv-dev` |
+| `yaml-cpp` | distro | both — config parsing | apt `libyaml-cpp-dev` |
+| build tools | — | build | apt `build-essential cmake git pkg-config` |
 
 ## Quick start (Docker)
 
@@ -40,13 +42,50 @@ your working copy over the baked source — see the comments in `run.sh`.
 
 ## Host build (without Docker)
 
-Install the dependencies above, then — from the repository root:
+Ubuntu. Mirrors what the Dockerfile does; run from the repository root.
 
+**1. apt packages** (build tools, codecs, OpenCV, yaml-cpp, librealsense build deps)
 ```bash
-# vendored SDK (Docker does this for you; needed only for host builds)
-git clone https://github.com/unitreerobotics/unitree_sdk2.git thirdparty/unitree_sdk2
+sudo apt update && sudo apt install -y \
+    build-essential cmake git pkg-config \
+    libyaml-cpp-dev \
+    libx264-dev libavcodec-dev libavutil-dev libswscale-dev libopencv-dev \
+    libusb-1.0-0-dev libudev-dev libssl-dev
+```
 
-cmake -B build && cmake --build build
+**2. CycloneDDS + CycloneDDS-CXX 0.10.2** — the `idlc` toolchain, into `/opt/cyclonedds`
+(pinned to match the SDK's bundled `libddscxx`; we use only the codegen tools):
+```bash
+git clone --depth 1 -b 0.10.2 https://github.com/eclipse-cyclonedds/cyclonedds.git /tmp/cyclonedds
+cmake -S /tmp/cyclonedds -B /tmp/cyclonedds/build \
+    -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds -DBUILD_IDLC=ON -DCMAKE_BUILD_TYPE=Release
+sudo cmake --build /tmp/cyclonedds/build --target install -j"$(nproc)"
+
+git clone --depth 1 -b 0.10.2 https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git /tmp/cyclonedds-cxx
+cmake -S /tmp/cyclonedds-cxx -B /tmp/cyclonedds-cxx/build \
+    -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds -DCMAKE_PREFIX_PATH=/opt/cyclonedds -DCMAKE_BUILD_TYPE=Release
+sudo cmake --build /tmp/cyclonedds-cxx/build --target install -j"$(nproc)"
+
+export PATH=/opt/cyclonedds/bin:$PATH      # idlc on PATH for the build below
+```
+
+**3. librealsense2 v2.58.1** (from source, library only — no examples/CUDA):
+```bash
+git clone --depth 1 -b v2.58.1 https://github.com/realsenseai/librealsense.git /tmp/librealsense
+cmake -S /tmp/librealsense -B /tmp/librealsense/build -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_EXAMPLES=false -DBUILD_GRAPHICAL_EXAMPLES=false -DBUILD_WITH_CUDA=false
+sudo cmake --build /tmp/librealsense/build --target install -j"$(nproc)" && sudo ldconfig
+```
+
+**4. unitree_sdk2** (vendored under `thirdparty/`, pinned):
+```bash
+git clone https://github.com/unitreerobotics/unitree_sdk2.git thirdparty/unitree_sdk2
+git -C thirdparty/unitree_sdk2 checkout 21d0a3b2c46ee48c8fdf2783becb6be3beb0a59b
+```
+
+**5. Build:**
+```bash
+cmake -B build && cmake --build build -j"$(nproc)"
 ```
 
 ## UWB device setup (Tx machine)
