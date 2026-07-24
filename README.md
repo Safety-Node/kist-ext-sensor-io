@@ -31,11 +31,18 @@ cd kist-ext-sensor-io
 
 All following steps run from the repository root.
 
-The Docker image bakes in everything below (SDK, packages, libraries, and the
-build) — `docker build -f docker/Dockerfile -t kist-ext-sensor-io .`, then
-`./docker/run.sh` (wires `--network host`, `--privileged -v /dev`, X11). The
-manual steps below are for a non-Docker host build; the UWB udev rule is
-host-side either way.
+#### Quick Start with Docker
+
+The image bakes in everything below (SDK, packages, libraries, and the build):
+
+```bash
+./docker/build.sh      # builds the image (docker build -t kist-ext-sensor-io)
+./docker/run.sh        # shell in the container; prebuilt binaries under build/
+```
+
+`run.sh` wires `--network host` (DDS), `--privileged -v /dev` (RealSense USB +
+`/dev/uwb`), and X11 (viewer). The numbered steps below are the manual
+(non-Docker) alternative; the UWB udev rule is host-side either way.
 
 #### 2. Install unitree_sdk2
 
