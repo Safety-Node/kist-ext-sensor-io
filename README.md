@@ -22,7 +22,6 @@ table + host-install steps are only for building **without** Docker (Ubuntu).
 | FFmpeg / libav | distro | Rx — H.264 color decode |
 | OpenCV | distro | Rx — viewer probe only (`test_realsense_receiver_viewer`) |
 | `yaml-cpp` | distro | both — config parsing |
-| build tools | — | build (`build-essential cmake git pkg-config`) |
 
 ## Quick start (Docker)
 
