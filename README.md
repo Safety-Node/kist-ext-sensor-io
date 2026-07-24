@@ -122,9 +122,10 @@ A sensor spans two sides:
 - **Receiver** — on the **consumer side** (your app): subscribes → decodes →
   writes the latest frame/fix into a buffer you poll.
 
-Both are own-no-thread assemblies — they wire and start/stop the worker threads;
-you keep the process alive and read the buffers. `domain_id` / `network_interface`
-must match on both sides.
+`start()` spins up the background receive/decode threads and returns; your code
+then just **polls the buffer** for the latest value and calls `stop()` when done
+(keep the process alive in between). Tx and Rx find each other over DDS only if
+they share the same `domain_id` and sit on the same network (`network_interface`).
 
 ### Embed the Receiver in your app
 
