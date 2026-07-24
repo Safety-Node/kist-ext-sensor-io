@@ -13,16 +13,16 @@ Sensors: UWB (Decawave DWM1001-dev), RealSense camera(D435i)
 The Docker image (recommended path below) installs all of these for you. The
 table + host-install steps are only for building **without** Docker (Ubuntu).
 
-| Component | Version | Role | How it's obtained |
-|---|---|---|---|
-| `unitree_sdk2` | pinned `21d0a3b` | both — DDS client + ROS2 `PoseStamped` IDL; bundles the CycloneDDS 0.10.2 runtime libs | vendored under `thirdparty/` (git clone) |
-| CycloneDDS + CycloneDDS-CXX | 0.10.2 | build-time — `idlc`/`idlcxx` codegen for the custom compressed-frame types (pinned to match the SDK's bundled `libddscxx`) | source → `/opt/cyclonedds` |
-| `librealsense2` | v2.58.1 | Tx — RealSense capture | source (library only, CUDA off) |
-| x264 | distro | Tx — H.264 color encode | apt `libx264-dev` |
-| FFmpeg / libav | distro | Rx — H.264 color decode | apt `libavcodec-dev libavutil-dev libswscale-dev` |
-| OpenCV | distro | Rx — viewer probe only (`test_realsense_receiver_viewer`) | apt `libopencv-dev` |
-| `yaml-cpp` | distro | both — config parsing | apt `libyaml-cpp-dev` |
-| build tools | — | build | apt `build-essential cmake git pkg-config` |
+| Component | Version | Role |
+|---|---|---|
+| `unitree_sdk2` | pinned `21d0a3b` | both — DDS client + ROS2 `PoseStamped` IDL; bundles the CycloneDDS 0.10.2 runtime libs |
+| CycloneDDS + CycloneDDS-CXX | 0.10.2 | build-time — `idlc`/`idlcxx` codegen for the custom compressed-frame types (pinned to match the SDK's bundled `libddscxx`) |
+| `librealsense2` | v2.58.1 | Tx — RealSense capture |
+| x264 | distro | Tx — H.264 color encode |
+| FFmpeg / libav | distro | Rx — H.264 color decode |
+| OpenCV | distro | Rx — viewer probe only (`test_realsense_receiver_viewer`) |
+| `yaml-cpp` | distro | both — config parsing |
+| build tools | — | build (`build-essential cmake git pkg-config`) |
 
 ## Quick start (Docker)
 
