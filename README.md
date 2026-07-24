@@ -15,7 +15,7 @@ table + host-install steps are only for building **without** Docker (Ubuntu).
 
 | Component | Version | Role |
 |---|---|---|
-| `unitree_sdk2` | pinned `21d0a3b` | both — DDS client + ROS2 `PoseStamped` IDL; bundles the CycloneDDS 0.10.2 runtime libs |
+| `unitree_sdk2` | `21d0a3b` | both — DDS client + ROS2 `PoseStamped` IDL; bundles the CycloneDDS 0.10.2 runtime libs |
 | CycloneDDS + CycloneDDS-CXX | 0.10.2 | build-time — `idlc`/`idlcxx` codegen for the custom compressed-frame types (pinned to match the SDK's bundled `libddscxx`) |
 | `librealsense2` | v2.58.1 | Tx — RealSense capture |
 | x264 | distro | Tx — H.264 color encode |
