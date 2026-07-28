@@ -94,7 +94,14 @@ for bin in "${BINS[@]}"; do
         echo "  already stubbed"
         continue
     fi
-    [ -e "${bin}.real" ] || { cp -a "$bin" "${bin}.real"; echo "  backed up -> ${bin}.real"; }
+    # A running executable can't be overwritten (ETXTBSY) — rename/unlink it
+    # first (both allowed while it runs; the live process keeps its inode), then
+    # create a fresh stub file at the original path.
+    if [ -e "${bin}.real" ]; then
+        rm -f "$bin"                                   # backup already exists
+    else
+        mv "$bin" "${bin}.real"; echo "  backed up -> ${bin}.real"
+    fi
     cat > "$bin" <<EOF
 #!/bin/bash
 $MARKER  original: ${bin}.real  (restore: free_camera.sh --restore)
