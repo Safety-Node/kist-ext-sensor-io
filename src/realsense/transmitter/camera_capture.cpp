@@ -17,6 +17,8 @@ bool CameraCapture::start(const CameraCaptureConfig& config) {
 
     try {
         rs2::config cfg;
+        if (!config_.serial.empty())
+            cfg.enable_device(config_.serial);   // pick this exact camera
         cfg.enable_stream(RS2_STREAM_DEPTH,
                           config_.depth_width, config_.depth_height,
                           RS2_FORMAT_Z16, config_.depth_fps);

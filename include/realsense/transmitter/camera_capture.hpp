@@ -24,6 +24,10 @@ struct SpatialFilterConfig {
 };
 
 struct CameraCaptureConfig {
+    // RealSense device serial to open. Empty = first available device. Required
+    // to disambiguate when several cameras are attached (multi-camera setups).
+    std::string serial;
+
     int  depth_width  = 640;
     int  depth_height = 480;
     int  depth_fps    = 30;

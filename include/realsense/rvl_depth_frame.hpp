@@ -14,6 +14,11 @@ namespace kist {
 // kUwbPoseTopic in uwb_position.hpp).
 inline constexpr const char* kCameraDepthTopic = "rt/kist/camera/depth/rvl";
 
+// Per-camera depth topic: rt/kist/camera/<name>/depth/rvl (see camera_color_topic).
+inline std::string camera_depth_topic(const std::string& name) {
+    return "rt/kist/camera/" + name + "/depth/rvl";
+}
+
 // RVL-compressed depth frame (Run-Length Variable-length, lossless) —
 // the depth counterpart to the wire payload. Metadata mirrors the
 // CompressedDepthFrame message; `data` is the RVL bitstream.

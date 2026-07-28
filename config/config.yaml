@@ -6,7 +6,7 @@ unitree:
   domain_id: 0
   # Network interface toward the consumers. On the G1 onboard PC this is
   # the robot-LAN interface; use "lo" for same-machine testing.
-  network_interface: lo
+  network_interface: eno2
 
 uwb:
   enabled: true
@@ -16,9 +16,10 @@ uwb:
   # frame_id stamped on published fixes (UWB local frame)
   frame_id: map
 
-camera:
-  enabled: true
-
+# Settings shared by every camera. Any `realsense_cameras` entry may override a
+# field (e.g. a wrist D405 dropping to 640x480 for USB budget). Keeps per-camera
+# entries down to name + serial.
+realsense_defaults:
   # RealSense capture — depth (Z16) + color (BGR8)
   depth_width: 640
   depth_height: 480
@@ -26,9 +27,7 @@ camera:
   color_width: 640
   color_height: 480
   color_fps: 30
-  align_to_color: true         # reproject depth into the color frame
-  depth_frame_id: camera_depth
-  color_frame_id: camera_color
+  align_to_color: true           # reproject depth into the color frame
 
   # Depth spatial (edge-preserving) filter — disable to skip
   spatial_filter:
@@ -43,3 +42,20 @@ camera:
   color_preset: ultrafast        # ultrafast..placebo (speed vs size)
   color_tune: zerolatency        # real-time streaming
   color_profile: baseline        # widest compatibility, no B-frames
+
+# One entry per physical camera. `name` namespaces the DDS topics
+# (rt/kist/camera/<name>/color/h264, .../depth/rvl) and defaults the frame_ids
+# (<name>_depth / <name>_color); `serial` picks the device (rs-enumerate-devices
+# lists them). A runner spawns one Transmitter/Receiver per entry. Only name +
+# serial are needed — add any realsense_defaults field here to override it.
+realsense_cameras:
+  - name: head
+    enabled: true
+    serial: ""                   # empty = first available device
+
+  # - name: left_wrist
+  #   serial: "230322270123"     # D405; smaller res for USB budget
+  #   color_width: 640
+  #   color_height: 480
+  #   depth_width: 640
+  #   depth_height: 480

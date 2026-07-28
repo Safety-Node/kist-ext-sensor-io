@@ -14,6 +14,13 @@ namespace kist {
 // kCameraDepthTopic).
 inline constexpr const char* kCameraColorTopic = "rt/kist/camera/color/h264";
 
+// Per-camera color topic: rt/kist/camera/<name>/color/h264. Multi-camera
+// setups namespace by name (head, left_wrist, ...); the name is the DDS
+// routing identity linking a Tx camera to its Rx consumer.
+inline std::string camera_color_topic(const std::string& name) {
+    return "rt/kist/camera/" + name + "/color/h264";
+}
+
 // H.264-compressed color frame (Annex-B NAL units) — the color
 // counterpart to RvlDepthFrame. `is_keyframe` lets a late-joining
 // receiver know when it can start decoding.

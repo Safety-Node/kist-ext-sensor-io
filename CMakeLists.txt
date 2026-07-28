@@ -53,6 +53,15 @@ add_library(uwb_io STATIC
 target_include_directories(uwb_io PUBLIC include)
 target_link_libraries(uwb_io PUBLIC unitree_sdk2)
 
+# ─── realsense_config ────────────────────────────────────────────────────────────
+# YAML -> CameraSpec (name + capture/encoder config, defaults + per-camera
+# override). Keeps the `cameras` schema in one place; the runners (and any
+# orchestrator) call cameras_from_yaml / camera_names_from_yaml instead of
+# parsing yaml themselves. No realsense/x264 deps — just the config structs.
+add_library(realsense_config STATIC src/realsense/realsense_config.cpp)
+target_include_directories(realsense_config PUBLIC include)
+target_link_libraries(realsense_config PUBLIC yaml-cpp)
+
 # ─── realsense camera (ported from depth-cam-stream-codec, ROS2 stripped) ──────
 # Split by role, mirroring the include/realsense/{transmitter,receiver}
 # tree: a shared wire lib, a Tx lib, an Rx lib, plus a guarded capture
@@ -160,12 +169,12 @@ target_link_libraries(uwb_receiver PUBLIC uwb_io)
 # They also double as the reference for how to embed the assemblies.
 if(TARGET realsense_transmitter)
     add_executable(test_realsense_transmitter test/test_realsense_transmitter.cpp)
-    target_link_libraries(test_realsense_transmitter PRIVATE realsense_transmitter yaml-cpp)
+    target_link_libraries(test_realsense_transmitter PRIVATE realsense_transmitter realsense_config yaml-cpp)
 endif()
 
 if(TARGET realsense_receiver)
     add_executable(test_realsense_receiver test/test_realsense_receiver.cpp)
-    target_link_libraries(test_realsense_receiver PRIVATE realsense_receiver yaml-cpp)
+    target_link_libraries(test_realsense_receiver PRIVATE realsense_receiver realsense_config yaml-cpp)
 endif()
 
 # Visual variant of the Rx runner — shows color | depth (window, or PNG when
@@ -174,7 +183,7 @@ find_package(OpenCV QUIET)
 if(TARGET realsense_receiver AND OpenCV_FOUND)
     add_executable(test_realsense_receiver_viewer test/test_realsense_receiver_viewer.cpp)
     target_link_libraries(test_realsense_receiver_viewer
-        PRIVATE realsense_receiver yaml-cpp ${OpenCV_LIBS})
+        PRIVATE realsense_receiver realsense_config yaml-cpp ${OpenCV_LIBS})
     target_include_directories(test_realsense_receiver_viewer PRIVATE ${OpenCV_INCLUDE_DIRS})
 endif()
 
