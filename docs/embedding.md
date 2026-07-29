@@ -33,11 +33,15 @@ rx.stop();
 
 ## RealSense
 
+One `RealsenseReceiver` per camera — `name` selects which camera's topics to
+subscribe to (`rt/kist/camera/<name>/...`), so it must match a `name` the
+transmitter published. Start one per camera you want:
+
 ```cpp
 #include "system/realsense_receiver.hpp"
 
 kist::RealsenseReceiver rx;
-if (!rx.start(domain_id, network_interface))
+if (!rx.start(domain_id, network_interface, "head"))   // camera name
     return 1;
 
 // poll from any thread; empty buffer = no live frame (1s watchdog)
@@ -46,3 +50,6 @@ auto depth = rx.depth().GetData();   // decoded Z16
 
 rx.stop();
 ```
+
+The names are in `config/config.yaml` (`realsense_cameras[].name`);
+`kist::camera_names_from_yaml(root)` returns them if you'd rather not hardcode.

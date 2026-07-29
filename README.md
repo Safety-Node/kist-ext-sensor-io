@@ -2,8 +2,7 @@
 
 External (attached) sensor I/O for the KIST G1 stack
 
-Sensors: UWB (Decawave DWM1001-dev), RealSense cameras (D435/D405 — one or
-several at once, e.g. a head D435 + two wrist D405s)
+Sensors: UWB (Decawave DWM1001-dev), RealSense cameras
 
 ## Architecture
 
