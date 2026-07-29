@@ -26,8 +26,7 @@ namespace {
 struct CamRx {
     std::string name;
     std::unique_ptr<kist::RealsenseReceiver> rx;
-    int64_t last_c = -1, last_d = -1;
-    int     color_n = 0, depth_n = 0;
+    uint64_t last_c = 0, last_d = 0;   // decode counters at last window
 };
 }
 
@@ -67,25 +66,26 @@ int main(int argc, char** argv) {
     std::printf("[test_realsense_receiver] %zu camera(s) subscribing on domain=%d iface=%s\n",
                 cams.size(), domain_id, iface.c_str());
 
+    // Per-second decode-fps per camera from the receiver's produce-site
+    // counters (delta of a monotonic count incremented where each frame is
+    // decoded), not by polling the latest-wins buffer — so it can't miss a
+    // frame that arrives between polls. This is the Rx number for the
+    // Tx→Rx→consumer fps comparison.
     auto window = std::chrono::steady_clock::now();
     while (!g_stop) {
-        for (auto& cam : cams) {
-            auto c = cam.rx->color().GetData();
-            auto d = cam.rx->depth().GetData();
-            if (c && c->stamp_ns != cam.last_c) { cam.last_c = c->stamp_ns; ++cam.color_n; }
-            if (d && d->stamp_ns != cam.last_d) { cam.last_d = d->stamp_ns; ++cam.depth_n; }
-        }
-
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         const auto now = std::chrono::steady_clock::now();
-        if (now - window >= std::chrono::seconds(1)) {
-            window = now;
-            for (auto& cam : cams) {
-                std::printf("  %-12s color %2d fps  depth %2d fps\n",
-                            cam.name.c_str(), cam.color_n, cam.depth_n);
-                cam.color_n = cam.depth_n = 0;
-            }
+        if (now - window < std::chrono::seconds(1)) continue;
+        window = now;
+        for (auto& cam : cams) {
+            const uint64_t c = cam.rx->color_decoded();
+            const uint64_t d = cam.rx->depth_decoded();
+            std::printf("  %-12s color %2llu fps  depth %2llu fps\n", cam.name.c_str(),
+                        (unsigned long long)(c - cam.last_c),
+                        (unsigned long long)(d - cam.last_d));
+            cam.last_c = c;
+            cam.last_d = d;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 
     for (auto& cam : cams) cam.rx->stop();

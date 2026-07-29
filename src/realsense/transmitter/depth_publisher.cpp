@@ -58,6 +58,7 @@ void DepthPublisher::publish(const RvlDepthFrame& frame) {
     msg.frame_id(frame.frame_id);
     msg.data(frame.data);
     pub_->Write(msg);
+    published_.fetch_add(1, std::memory_order_relaxed);
 }
 
 void DepthPublisher::run() {

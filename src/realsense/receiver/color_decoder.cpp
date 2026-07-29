@@ -120,8 +120,10 @@ void ColorDecodeThread::run() {
         auto frame = source_->GetData();
         if (frame && frame->stamp_ns != last_stamp) {
             last_stamp = frame->stamp_ns;
-            if (auto dec = decoder_->decode(*frame))
+            if (auto dec = decoder_->decode(*frame)) {
                 out.SetData(std::move(*dec));
+                decoded_.fetch_add(1, std::memory_order_relaxed);
+            }
         } else {
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
         }

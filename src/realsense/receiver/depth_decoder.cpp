@@ -113,6 +113,7 @@ void DepthDecodeThread::run() {
         if (frame && frame->stamp_ns != last_stamp) {
             last_stamp = frame->stamp_ns;
             out.SetData(decoder_.decode(*frame));
+            decoded_.fetch_add(1, std::memory_order_relaxed);
         } else {
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
         }

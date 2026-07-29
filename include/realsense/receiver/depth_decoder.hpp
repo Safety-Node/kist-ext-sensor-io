@@ -5,6 +5,7 @@
 #include "realsense/rvl_depth_frame.hpp"
 
 #include <atomic>
+#include <cstdint>
 #include <thread>
 
 namespace kist {
@@ -27,6 +28,10 @@ public:
 
     DataBuffer<DepthFrame> out;  // decoded Z16
 
+    // Monotonic count of frames successfully decoded into `out`. Poll the delta
+    // over a window for a produce-site-accurate decode rate (throughput / health).
+    uint64_t decoded() const { return decoded_.load(std::memory_order_relaxed); }
+
 private:
     void run();
 
@@ -34,6 +39,7 @@ private:
     RvlDepthDecoder            decoder_;
     std::thread                thread_;
     std::atomic<bool>          running_{false};
+    std::atomic<uint64_t>      decoded_{0};
 };
 
 } // namespace kist

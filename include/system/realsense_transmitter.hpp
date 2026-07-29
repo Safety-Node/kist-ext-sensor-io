@@ -26,6 +26,12 @@ public:
                const H264EncoderConfig& color_cfg);
     void stop();
 
+    // Frames written to DDS so far (monotonic). Poll the delta over a window
+    // for the publish rate per stream — the produce-side truth for the
+    // Tx→Rx→consumer fps comparison.
+    uint64_t color_published() const { return color_.published(); }
+    uint64_t depth_published() const { return depth_.published(); }
+
 private:
     CameraCapture  capture_;
     ColorPublisher color_;

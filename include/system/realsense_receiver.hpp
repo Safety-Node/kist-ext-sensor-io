@@ -31,6 +31,12 @@ public:
     DataBuffer<ColorFrame>& color() { return color_dec_.out; }
     DataBuffer<DepthFrame>& depth() { return depth_dec_.out; }
 
+    // Frames decoded so far (monotonic). Poll the delta over a window for the
+    // decode rate per stream — the produce-side truth (vs polling the latest-
+    // wins buffer, which only sees a lower bound).
+    uint64_t color_decoded() const { return color_dec_.decoded(); }
+    uint64_t depth_decoded() const { return depth_dec_.decoded(); }
+
 private:
     ColorSubscriber   color_sub_;
     DepthSubscriber   depth_sub_;

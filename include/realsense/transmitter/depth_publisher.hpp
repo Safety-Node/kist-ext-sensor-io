@@ -6,6 +6,7 @@
 #include "realsense/transmitter/rvl_encoder.hpp"
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <thread>
@@ -41,6 +42,10 @@ public:
                        const std::string& topic = kCameraDepthTopic);
     void publish(const RvlDepthFrame& frame);
 
+    // Monotonic count of frames actually written to DDS. Poll the delta over a
+    // window for a produce-site-accurate publish rate (throughput / health).
+    uint64_t published() const { return published_.load(std::memory_order_relaxed); }
+
 private:
     void run();
 
@@ -51,6 +56,7 @@ private:
     std::unique_ptr<Pub>    pub_;
     std::thread             thread_;
     std::atomic<bool>       running_{false};
+    std::atomic<uint64_t>   published_{0};
 };
 
 } // namespace kist
