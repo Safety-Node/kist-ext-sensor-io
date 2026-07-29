@@ -132,7 +132,4 @@ check reception. The RealSense runners spawn one Tx/Rx **per camera** in
 ./build/test_realsense_receiver_viewer  # grid: color row / depth row, one column per camera
 ```
 
-`test_realsense_receiver_viewer [config] [camera_name]` — pass a camera name to
-view just that one instead of the whole grid.
-
 To embed a receiver as a library in your own app, see [docs/embedding.md](docs/embedding.md).
