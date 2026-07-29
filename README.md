@@ -2,7 +2,8 @@
 
 External (attached) sensor I/O for the KIST G1 stack
 
-Sensors: UWB (Decawave DWM1001-dev), RealSense camera(D435i)
+Sensors: UWB (Decawave DWM1001-dev), RealSense cameras (D435/D405 — one or
+several at once, e.g. a head D435 + two wrist D405s)
 
 ## Architecture
 
@@ -118,17 +119,21 @@ cmake -B build && cmake --build build
 Run the standalone binaries — each reads `config/config.yaml` (see
 [docs/configuration.md](docs/configuration.md) for the fields). Run a transmitter
 on the machine with the sensor, and a receiver anywhere on the same DDS domain to
-check reception:
+check reception. The RealSense runners spawn one Tx/Rx **per camera** in
+`realsense_cameras`, so all configured cameras stream at once:
 
 ```bash
-# device side (sensor plugged in) — publish
+# device side (sensors plugged in) — publish
 ./build/test_uwb_transmitter            # DWM dongle -> DDS
-./build/test_realsense_transmitter      # D435i      -> DDS
+./build/test_realsense_transmitter      # every camera in realsense_cameras -> DDS
 
 # consumer side — subscribe
 ./build/test_uwb_receiver               # prints received fixes
-./build/test_realsense_receiver         # prints received fps
-./build/test_realsense_receiver_viewer  # shows color | depth (OpenCV window)
+./build/test_realsense_receiver         # per-camera received fps
+./build/test_realsense_receiver_viewer  # grid: color row / depth row, one column per camera
 ```
+
+`test_realsense_receiver_viewer [config] [camera_name]` — pass a camera name to
+view just that one instead of the whole grid.
 
 To embed a receiver as a library in your own app, see [docs/embedding.md](docs/embedding.md).

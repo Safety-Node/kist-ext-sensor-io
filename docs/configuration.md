@@ -19,20 +19,51 @@ it inside the container — the image bakes it in).
 | `serial_baud` | `115200` | DWM UART baud |
 | `frame_id` | `map` | frame_id stamped on published fixes |
 
-## `camera`
+## `realsense_cameras` + `realsense_defaults`
+
+Cameras are a **list** — one entry per physical RealSense. Shared settings live
+in `realsense_defaults`; each `realsense_cameras` entry adds `name` + `serial`
+and may override any default. A runner spawns one Transmitter/Receiver per entry
+(each with its own threads), and every camera's DDS topics are namespaced by its
+`name`. Consumers subscribe to whichever camera(s) they want by name.
+
+### `realsense_cameras` — per-camera entries
 
 | Key | Default | Meaning |
 |---|---|---|
-| `enabled` | `true` | run the camera Tx/Rx |
+| `name` | (required) | camera name. Namespaces the DDS topics `rt/kist/camera/<name>/color/h264` and `.../depth/rvl`, and defaults the frame_ids (`<name>_depth` / `<name>_color`). Tx and Rx agree by this name. |
+| `serial` | `""` → first device | RealSense serial to open (from `rs-enumerate-devices`). Set it to pick a specific camera when several are attached. |
+| `enabled` | `true` | run this camera; `false` skips it on **both** Tx and Rx (handy to disable one without deleting the entry) |
+
+Any `realsense_defaults` field may also appear in an entry to override it for
+that one camera (e.g. a wrist D405 at 640×480 while the head runs 1280×720).
+
+```yaml
+realsense_cameras:
+  - name: head
+    serial: "938422073271"
+  - name: left_wrist
+    serial: "260422272337"
+    color_fps: 15            # override just this camera
+  - name: right_wrist
+    serial: "260322270228"
+    enabled: false           # temporarily off
+```
+
+### `realsense_defaults` — shared capture settings
+
+| Key | Default | Meaning |
+|---|---|---|
 | `depth_width` / `depth_height` / `depth_fps` | `640` / `480` / `30` | depth (Z16) stream mode |
 | `color_width` / `color_height` / `color_fps` | `640` / `480` / `30` | color (BGR8) stream mode |
 | `align_to_color` | `true` | reproject depth into the color frame (CPU-heavy) |
-| `depth_frame_id` / `color_frame_id` | `camera_depth` / `camera_color` | frame ids |
+| `depth_frame_id` / `color_frame_id` | `<name>_depth` / `<name>_color` | frame ids (default from the camera name) |
 
-Higher resolutions (e.g. 1280×720) are much heavier — more CPU for `align` + H.264
-encode, and larger depth frames on the wire.
+Higher resolutions (e.g. 1280×720) are much heavier. With **several cameras on one
+machine**, watch USB bandwidth (a shared hub) and — on a Jetson — CPU for `align` +
+H.264 encode; drop `color_fps` or `align_to_color` per camera if frames stall.
 
-### `camera.spatial_filter` — depth edge-preserving filter
+### `realsense_defaults.spatial_filter` — depth edge-preserving filter
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -41,7 +72,7 @@ encode, and larger depth frames on the wire.
 | `smooth_alpha` | `0.5` | smoothing weight (0–1) |
 | `smooth_delta` | `20.0` | depth-discontinuity threshold (mm) |
 
-### `camera` — H.264 color encoder (x264)
+### `realsense_defaults` — H.264 color encoder (x264)
 
 | Key | Default | Meaning |
 |---|---|---|
