@@ -1,12 +1,9 @@
-# kist-ext-sensor-io — single config file, one section per sensor
-# (same convention as kist-gearsonic-inference / kist-navigation-planner)
-
 unitree:
-  # DDS domain id (default 0; must match the consumers')
+  # DDS domain id (default 0)
   domain_id: 0
   # Network interface toward the consumers. On the G1 onboard PC this is
   # the robot-LAN interface; use "lo" for same-machine testing.
-  network_interface: eno2
+  network_interface: lo
 
 uwb:
   enabled: true
@@ -48,14 +45,19 @@ realsense_defaults:
 # (<name>_depth / <name>_color); `serial` picks the device (rs-enumerate-devices
 # lists them). A runner spawns one Transmitter/Receiver per entry. Only name +
 # serial are needed — add any realsense_defaults field here to override it.
-realsense_cameras:
-  - name: head
-    enabled: true
-    serial: ""                   # empty = first available device
+# serial empty = first available device
 
+realsense_cameras:
+  # ---------------------------------------------------------------------
   # - name: left_wrist
-  #   serial: "230322270123"     # D405; smaller res for USB budget
-  #   color_width: 640
-  #   color_height: 480
-  #   depth_width: 640
-  #   depth_height: 480
+  #   serial: "230322270123"     # D405, D435, D455 etc.. (find rs-enumerate-devices lists)
+  #   enabled : false
+  # ---------------------------------------------------------------------
+  - name: head
+    serial: "938422073271"
+
+  - name: left_wrist
+    serial: "260422272337"
+
+  - name: right_wrist
+    serial: "260322270228"

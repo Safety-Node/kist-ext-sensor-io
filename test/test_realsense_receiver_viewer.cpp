@@ -29,7 +29,8 @@ using namespace kist;
 static std::atomic<bool> g_stop{false};
 
 namespace {
-constexpr int    kTileW = 480, kTileH = 270;
+constexpr int    kTileW = 640, kTileH = 480;   // per-camera tile size (native)
+constexpr double kDepthRangeM = 4.0;   // depth colormap span: 0..4 m -> JET
 const cv::Scalar kBg(40, 40, 40), kText(230, 230, 230);
 
 struct CamRx {
@@ -45,7 +46,10 @@ struct CamRx {
 cv::Mat depth_tile(const DepthFrame& d) {
     cv::Mat depth16(d.height, d.width, CV_16UC1, const_cast<uint8_t*>(d.data.data()));
     cv::Mat small; cv::resize(depth16, small, cv::Size(kTileW, kTileH), 0, 0, cv::INTER_NEAREST);
-    cv::Mat n8; small.convertTo(n8, CV_8UC1, 255.0 / 4000.0);
+    // Normalize by real distance (via depth_scale) so cameras with different
+    // scales (D435 1mm vs D405 0.1mm) share one 0..kDepthRangeM color range.
+    const double ds = (d.depth_scale > 0.f) ? d.depth_scale : 0.001;
+    cv::Mat n8; small.convertTo(n8, CV_8UC1, 255.0 * ds / kDepthRangeM);
     cv::Mat c; cv::applyColorMap(n8, c, cv::COLORMAP_JET);
     c.setTo(cv::Scalar(0, 0, 0), small == 0);
     return c;
