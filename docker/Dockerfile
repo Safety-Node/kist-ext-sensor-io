@@ -61,6 +61,10 @@ RUN git clone --depth 1 --branch "${CYCLONEDDS_VERSION}" \
     rm -rf /tmp/cyclonedds /tmp/cyclonedds-cxx
 ENV PATH=/opt/cyclonedds/bin:${PATH}
 ENV CYCLONEDDS_HOME=/opt/cyclonedds
+# Enlarge the DDS socket buffers (big depth/color frames overflow the default UDP
+# buffers -> receiver drops samples). config/cyclonedds.xml lands here via COPY.
+# See that file re: the host net.core.[rw]mem_max cap under --network host.
+ENV CYCLONEDDS_URI=file:///workspace/kist-ext-sensor-io/config/cyclonedds.xml
 
 # ─── librealsense2 (built from source) ────────────────────────────────────────
 # Tx-side capture. Source-built (not Intel's apt repo, whose noble signing
