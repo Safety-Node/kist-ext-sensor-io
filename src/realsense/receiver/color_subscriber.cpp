@@ -18,8 +18,11 @@ bool ColorSubscriber::start(int domain_id, const std::string& network_interface,
     try {
         unitree::robot::ChannelFactory::Instance()->Init(domain_id, network_interface);
         sub_.reset(new Sub(topic));
+        // Reader queue depth (KEEP_LAST N). Deep enough (~1s at 30fps) to absorb
+        // arrival bursts without dropping at the reader; the downstream buffer is
+        // latest-wins + stamp-deduped, so a deeper queue adds no consumer latency.
         sub_->InitChannel(
-            [this](const void* msg) { on_color_update(msg); }, 1);
+            [this](const void* msg) { on_color_update(msg); }, 30);
     } catch (const std::exception& e) {
         std::cerr << "[ColorSubscriber] DDS init failed on interface \""
                   << network_interface << "\": " << e.what() << "\n";
