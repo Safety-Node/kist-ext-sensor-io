@@ -115,11 +115,12 @@ cmake -B build && cmake --build build
 
 ## Usage
 
-Run the standalone binaries — each reads `config/config.yaml` (see
-[docs/configuration.md](docs/configuration.md) for the fields). Run a transmitter
-on the machine with the sensor, and a receiver anywhere on the same DDS domain to
-check reception. The RealSense runners spawn one Tx/Rx **per camera** in
-`realsense_cameras`, so all configured cameras stream at once:
+Set up the config once before running:
+
+- `config/config.yaml` — cameras (`name`/`serial`), UWB serial port.
+- `config/cyclonedds.xml` — set the NIC (default `lo` for same-machine
+  testing; the LAN interface, e.g. `eth0`, for two machines).
+- All keys: [docs/configuration.md](docs/configuration.md).
 
 ```bash
 # device side (sensors plugged in) — publish
@@ -129,7 +130,9 @@ check reception. The RealSense runners spawn one Tx/Rx **per camera** in
 # consumer side — subscribe
 ./build/test_uwb_receiver               # prints received fixes
 ./build/test_realsense_receiver         # per-camera received fps
-./build/test_realsense_receiver_viewer  # grid: color row / depth row, one column per camera
+./build/test_realsense_receiver_viewer  # grid: color | depth, one column per camera
 ```
 
-To embed a receiver as a library in your own app, see [docs/embedding.md](docs/embedding.md).
+Transmitters run on the machine with the sensor; receivers anywhere on the
+same DDS domain. To embed a receiver in your own app:
+[docs/embedding.md](docs/embedding.md).
