@@ -53,7 +53,7 @@ realsense_cameras:
   # ---------------------------------------------------------------------
   # - name: left_wrist
   #   serial: "230322270123"     # D405, D435, D455 etc.. (find rs-enumerate-devices lists)
-  #   enabled : false
+  #   enabled: false
   # ---------------------------------------------------------------------
   - name: head
     serial: "938422073271"
