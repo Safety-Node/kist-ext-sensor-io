@@ -123,7 +123,19 @@ Set up the config once before running:
 - All keys: [docs/configuration.md](docs/configuration.md).
 
 ```bash
-# device side (sensors plugged in) — publish
+# device side (sensors plugged in) — publish everything: UWB + all cameras
+./build/kist_ext_sensor_io tx
+
+# consumer side — receive everything, print per-second rates
+./build/kist_ext_sensor_io rx
+```
+
+Both take an optional config path (default `config/config.yaml`).
+
+To run a single sensor in isolation:
+
+```bash
+# device side (sensor plugged in) — publish
 ./build/test_uwb_transmitter            # DWM dongle -> DDS
 ./build/test_realsense_transmitter      # every camera in realsense_cameras -> DDS
 
@@ -136,3 +148,34 @@ Set up the config once before running:
 Transmitters run on the machine with the sensor; receivers anywhere on the
 same DDS domain. To embed a receiver in your own app:
 [docs/embedding.md](docs/embedding.md).
+
+## System setup
+
+Once per machine, raise the kernel's socket-buffer limits so the 16 MB
+requests in `cyclonedds.xml` can take effect:
+
+```bash
+sudo tee /etc/sysctl.d/99-dds-buffers.conf <<'EOF'
+net.core.rmem_max = 134217728
+net.core.wmem_max = 134217728
+EOF
+sudo sysctl --system
+```
+
+On a Jetson device side, pin the clocks at boot (they reset on reboot):
+
+```bash
+sudo tee /etc/systemd/system/jetson-clocks.service <<'EOF'
+[Unit]
+Description=jetson_clocks at boot
+After=nvpmodel.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/jetson_clocks
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl enable --now jetson-clocks
+```

@@ -162,6 +162,40 @@ add_library(uwb_receiver STATIC src/system/uwb_receiver.cpp)
 target_include_directories(uwb_receiver PUBLIC include)
 target_link_libraries(uwb_receiver PUBLIC uwb_io)
 
+# ─── whole-device assemblies (embeddable libraries) ───────────────────────────
+# ExtSensorIoTx / ExtSensorIoRx — everything one machine publishes/consumes
+# behind one start/stop: UWB + all RealSense cameras. Guarded on the same
+# heavy deps as the per-sensor assemblies they wrap. yaml-free, like all
+# assemblies — config parsing lives in the runners.
+if(TARGET realsense_transmitter)
+    add_library(ext_sensor_io_tx STATIC src/system/ext_sensor_io_tx.cpp)
+    target_include_directories(ext_sensor_io_tx PUBLIC include)
+    target_link_libraries(ext_sensor_io_tx
+        PUBLIC realsense_transmitter uwb_transmitter realsense_config)
+else()
+    message(STATUS "realsense_transmitter missing — skipping ext_sensor_io_tx")
+endif()
+
+if(TARGET realsense_receiver)
+    add_library(ext_sensor_io_rx STATIC src/system/ext_sensor_io_rx.cpp)
+    target_include_directories(ext_sensor_io_rx PUBLIC include)
+    target_link_libraries(ext_sensor_io_rx PUBLIC realsense_receiver uwb_receiver)
+else()
+    message(STATUS "realsense_receiver missing — skipping ext_sensor_io_rx")
+endif()
+
+# ─── main runner ──────────────────────────────────────────────────────────────
+# The operational entry point: `kist_ext_sensor_io <tx|rx> [config]` runs the
+# whole-device assembly for that side. Needs both assemblies so one binary
+# serves either role on any machine.
+if(TARGET ext_sensor_io_tx AND TARGET ext_sensor_io_rx)
+    add_executable(kist_ext_sensor_io src/main.cpp)
+    target_link_libraries(kist_ext_sensor_io
+        PRIVATE ext_sensor_io_tx ext_sensor_io_rx realsense_config yaml-cpp)
+else()
+    message(STATUS "ext_sensor_io_tx/rx missing — skipping kist_ext_sensor_io runner")
+endif()
+
 # ─── tests ────────────────────────────────────────────────────────────────────
 # Standalone runners for the RealSense assemblies — read config.yaml, start
 # the assembly, and run (Tx publishes; Rx prints received fps). Run the two
