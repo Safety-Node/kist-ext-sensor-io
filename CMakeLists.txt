@@ -189,7 +189,7 @@ endif()
 # whole-device assembly for that side. Needs both assemblies so one binary
 # serves either role on any machine.
 if(TARGET ext_sensor_io_tx AND TARGET ext_sensor_io_rx)
-    add_executable(kist_ext_sensor_io src/kist_ext_sensor_io.cpp)
+    add_executable(kist_ext_sensor_io src/main.cpp)
     target_link_libraries(kist_ext_sensor_io
         PRIVATE ext_sensor_io_tx ext_sensor_io_rx realsense_config yaml-cpp)
 else()
