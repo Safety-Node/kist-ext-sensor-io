@@ -123,7 +123,19 @@ Set up the config once before running:
 - All keys: [docs/configuration.md](docs/configuration.md).
 
 ```bash
-# device side (sensors plugged in) — publish
+# device side (sensors plugged in) — publish everything: UWB + all cameras
+./build/kist_ext_sensor_io tx
+
+# consumer side — receive everything, print per-second rates
+./build/kist_ext_sensor_io rx
+```
+
+Both take an optional config path (default `config/config.yaml`).
+
+To run a single sensor in isolation:
+
+```bash
+# device side (sensor plugged in) — publish
 ./build/test_uwb_transmitter            # DWM dongle -> DDS
 ./build/test_realsense_transmitter      # every camera in realsense_cameras -> DDS
 
