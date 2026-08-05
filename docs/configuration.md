@@ -8,7 +8,13 @@ it inside the container — the image bakes it in).
 | Key | Default | Meaning |
 |---|---|---|
 | `domain_id` | `0` | DDS domain — must match on Tx and Rx |
-| `network_interface` | `lo` | NIC that DDS binds to. `lo` for same-machine; the LAN interface (e.g. `eth0`, `eno2`) for two machines. Names differ per host (`ip -brief addr`); both ends must share a subnet |
+| `dds_config` | `config/cyclonedds.xml` | DDS transport config (XML) — **the NIC lives there** (`<NetworkInterface name=...>`: `lo` for same-machine, the LAN interface e.g. `eth0`/`eno2` for two machines; `ip -brief addr` lists names) along with the socket-buffer tuning. A pre-set `CYCLONEDDS_URI` env (e.g. the Docker image's) wins over this path. |
+
+The former `network_interface` key is gone on purpose: passing a non-empty
+interface to `ChannelFactory::Init` makes the SDK build its own DDS config
+and *silently ignore* `CYCLONEDDS_URI` — which disabled every knob in
+`config/cyclonedds.xml`. The runners now route the XML and hand the SDK an
+empty interface, so the XML must name the NIC instead.
 
 ## `uwb`
 

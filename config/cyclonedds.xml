@@ -6,7 +6,7 @@
   full frame fits without loss. One file serves both sides.
 
   NOTE: the OS caps these at net.core.wmem_max / net.core.rmem_max. With Docker
-  `--network host`, the container shares the HOST net namespace, so raise the
+  `network host`, the container shares the HOST net namespace, so raise the
   limits on the HOST for the full 16MB to take effect (otherwise CycloneDDS is
   silently clamped):
       sudo sysctl -w net.core.wmem_max=16777216 net.core.rmem_max=16777216
@@ -18,6 +18,16 @@
             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
             xsi:schemaLocation="https://cdds.io/config https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd">
   <Domain id="any">
+    <General>
+      <!-- The NIC toward the DDS peers on THIS machine (robot LAN interface
+           on the G1 onboard PC, e.g. eth0; "lo" for same-machine testing).
+           It must be named HERE: the runners pass an empty interface to the
+           SDK on purpose — a non-empty one makes ChannelFactory::Init build
+           its own DDS config and silently discard this whole file. -->
+      <Interfaces>
+        <NetworkInterface name="lo" priority="default" multicast="default"/>
+      </Interfaces>
+    </General>
     <Internal>
       <SocketSendBufferSize min="16MB"/>
       <SocketReceiveBufferSize min="16MB"/>

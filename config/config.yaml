@@ -1,9 +1,11 @@
 unitree:
   # DDS domain id (default 0)
   domain_id: 0
-  # Network interface toward the consumers. On the G1 onboard PC this is
-  # the robot-LAN interface; use "lo" for same-machine testing.
-  network_interface: lo
+  # DDS transport config (XML): the network interface AND the socket-buffer
+  # tuning live THERE — edit config/cyclonedds.xml to change the NIC.
+  # (Why not here: the SDK ignores CYCLONEDDS_URI when an interface is
+  # passed in code, so the runners route everything through the XML.)
+  dds_config: config/cyclonedds.xml
 
 uwb:
   enabled: true

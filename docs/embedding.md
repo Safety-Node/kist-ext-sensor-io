@@ -5,6 +5,13 @@ A sensor spans two sides:
 - **Transmitter** — device side (where the sensor is plugged in)
 - **Receiver** — consumer side (your app)
 
+> **network_interface caveat**: passing a non-empty interface into
+> `start(domain_id, network_interface, ...)` makes the SDK build its own DDS
+> config and **silently ignore `CYCLONEDDS_URI`** — including the socket
+> buffer tuning in `config/cyclonedds.xml`. Prefer what the runners do:
+> route the XML via `CYCLONEDDS_URI` (see `common/dds_config.hpp`), name the
+> NIC inside the XML, and pass `""` as the interface.
+
 ## Link the receiver
 
 ```cmake

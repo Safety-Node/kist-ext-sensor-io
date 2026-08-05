@@ -10,6 +10,7 @@
 #include "system/realsense_receiver.hpp"
 #include "realsense/realsense_config.hpp"
 #include "common/config.hpp"
+#include "common/dds_config.hpp"
 
 #include <opencv2/opencv.hpp>
 
@@ -102,7 +103,8 @@ int main(int argc, char** argv) {
     const auto& root = Config::instance().root();
     const auto unitree      = root["unitree"];
     const int domain_id     = unitree["domain_id"].as<int>(0);
-    const std::string iface = unitree["network_interface"].as<std::string>("lo");
+    if (!kist::apply_dds_config(root)) return 1;
+    const std::string iface;  // empty on purpose — the NIC comes from the DDS config XML
     const std::string only  = (argc >= 3) ? argv[2] : "";   // view just this camera
 
     const bool has_disp = [] { const char* d = std::getenv("DISPLAY"); return d && d[0]; }();
