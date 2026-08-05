@@ -5,13 +5,6 @@ A sensor spans two sides:
 - **Transmitter** — device side (where the sensor is plugged in)
 - **Receiver** — consumer side (your app)
 
-> **network_interface caveat**: passing a non-empty interface into
-> `start(domain_id, network_interface, ...)` makes the SDK build its own DDS
-> config and **silently ignore `CYCLONEDDS_URI`** — including the socket
-> buffer tuning in `config/cyclonedds.xml`. Prefer what the runners do:
-> route the XML via `CYCLONEDDS_URI` (see `common/dds_config.hpp`), name the
-> NIC inside the XML, and pass `""` as the interface.
-
 ## Link the receiver
 
 ```cmake
@@ -25,10 +18,12 @@ Same shape — `rx.fix()` for the latest position, or a hook that fires on each 
 fix instead of polling (runs on the DDS thread — keep it cheap):
 
 ```cpp
+#include "common/dds_config.hpp"
 #include "system/uwb_receiver.hpp"
 
 kist::UwbReceiver rx;
-rx.start(domain_id, network_interface);
+kist::apply_dds_config(root);   // routes config/cyclonedds.xml (the NIC lives there)
+rx.start(domain_id, "");        // empty interface — a non-empty one disables the XML
 
 auto fix = rx.fix().GetDataWithTime();
 // or, callback instead of polling:
@@ -45,10 +40,12 @@ subscribe to (`rt/kist/camera/<name>/...`), so it must match a `name` the
 transmitter published. Start one per camera you want:
 
 ```cpp
+#include "common/dds_config.hpp"
 #include "system/realsense_receiver.hpp"
 
 kist::RealsenseReceiver rx;
-if (!rx.start(domain_id, network_interface, "head"))   // camera name
+kist::apply_dds_config(root);   // routes config/cyclonedds.xml (the NIC lives there)
+if (!rx.start(domain_id, "", "head"))                  // camera name
     return 1;
 
 // poll from any thread; empty buffer = no live frame (1s watchdog)

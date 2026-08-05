@@ -8,13 +8,7 @@ it inside the container — the image bakes it in).
 | Key | Default | Meaning |
 |---|---|---|
 | `domain_id` | `0` | DDS domain — must match on Tx and Rx |
-| `dds_config` | `config/cyclonedds.xml` | DDS transport config (XML) — **the NIC lives there** (`<NetworkInterface name=...>`: `lo` for same-machine, the LAN interface e.g. `eth0`/`eno2` for two machines; `ip -brief addr` lists names) along with the socket-buffer tuning. A pre-set `CYCLONEDDS_URI` env (e.g. the Docker image's) wins over this path. |
-
-The former `network_interface` key is gone on purpose: passing a non-empty
-interface to `ChannelFactory::Init` makes the SDK build its own DDS config
-and *silently ignore* `CYCLONEDDS_URI` — which disabled every knob in
-`config/cyclonedds.xml`. The runners now route the XML and hand the SDK an
-empty interface, so the XML must name the NIC instead.
+| `dds_config` | `config/cyclonedds.xml` | DDS transport config (XML) — the NIC and socket tuning live there (table below). A pre-set `CYCLONEDDS_URI` env wins over this path |
 
 ## `uwb`
 
@@ -87,3 +81,25 @@ H.264 encode; drop `color_fps` or `align_to_color` per camera if frames stall.
 | `color_preset` | `ultrafast` | x264 speed/quality preset |
 | `color_tune` | `zerolatency` | x264 tune |
 | `color_profile` | `baseline` | H.264 profile |
+
+## `cyclonedds.xml`
+
+The network interface and the DDS transport tuning live here — **not in
+config.yaml**.
+
+| Element | Value | Meaning |
+|---|---|---|
+| `General/Interfaces/NetworkInterface name` | `lo` | default is same-machine testing; for deployment set the LAN NIC (e.g. `eth0`, `eno2`) here |
+| `General/FragmentSize` / `MaxMessageSize` / `MaxRexmitMessageSize` | `1344 B` / `1400 B` / `1400 B` | UDP datagrams capped at one MTU |
+| `Internal/SocketSendBufferSize min` | `16MiB` | UDP send buffer size |
+| `Internal/SocketReceiveBufferSize min` | `16MiB` | UDP receive buffer size |
+
+The socket buffers need the host kernel to allow them — once per machine:
+
+```bash
+sudo tee /etc/sysctl.d/99-dds-buffers.conf <<'EOF'
+net.core.wmem_max = 16777216
+net.core.rmem_max = 16777216
+EOF
+sudo sysctl --system
+```
