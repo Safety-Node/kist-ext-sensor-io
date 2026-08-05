@@ -91,15 +91,5 @@ config.yaml**.
 |---|---|---|
 | `General/Interfaces/NetworkInterface name` | `lo` | default is same-machine testing; for deployment set the LAN NIC (e.g. `eth0`, `eno2`) here |
 | `General/FragmentSize` / `MaxMessageSize` / `MaxRexmitMessageSize` | `1344 B` / `1400 B` / `1400 B` | UDP datagrams capped at one MTU |
-| `Internal/SocketSendBufferSize min` | `16MiB` | UDP send buffer size |
-| `Internal/SocketReceiveBufferSize min` | `16MiB` | UDP receive buffer size |
-
-The socket buffers need the host kernel to allow them — once per machine:
-
-```bash
-sudo tee /etc/sysctl.d/99-dds-buffers.conf <<'EOF'
-net.core.wmem_max = 16777216
-net.core.rmem_max = 16777216
-EOF
-sudo sysctl --system
-```
+| `Internal/SocketSendBufferSize min` | `16MiB` | UDP send buffer size — needs the kernel limit raised once per machine (README, System setup) |
+| `Internal/SocketReceiveBufferSize min` | `16MiB` | UDP receive buffer size — same kernel limit |
