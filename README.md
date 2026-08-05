@@ -161,21 +161,3 @@ net.core.wmem_max = 134217728
 EOF
 sudo sysctl --system
 ```
-
-On a Jetson device side, pin the clocks at boot (they reset on reboot):
-
-```bash
-sudo tee /etc/systemd/system/jetson-clocks.service <<'EOF'
-[Unit]
-Description=jetson_clocks at boot
-After=nvpmodel.service
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/jetson_clocks
-
-[Install]
-WantedBy=multi-user.target
-EOF
-sudo systemctl enable --now jetson-clocks
-```
