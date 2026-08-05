@@ -148,3 +148,34 @@ To run a single sensor in isolation:
 Transmitters run on the machine with the sensor; receivers anywhere on the
 same DDS domain. To embed a receiver in your own app:
 [docs/embedding.md](docs/embedding.md).
+
+## System setup
+
+Once per machine, raise the kernel's socket-buffer limits so the 16 MB
+requests in `cyclonedds.xml` can take effect:
+
+```bash
+sudo tee /etc/sysctl.d/99-dds-buffers.conf <<'EOF'
+net.core.rmem_max = 134217728
+net.core.wmem_max = 134217728
+EOF
+sudo sysctl --system
+```
+
+On a Jetson device side, pin the clocks at boot (they reset on reboot):
+
+```bash
+sudo tee /etc/systemd/system/jetson-clocks.service <<'EOF'
+[Unit]
+Description=jetson_clocks at boot
+After=nvpmodel.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/jetson_clocks
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl enable --now jetson-clocks
+```
