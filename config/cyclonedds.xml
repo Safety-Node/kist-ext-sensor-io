@@ -17,7 +17,7 @@
 <CycloneDDS xmlns="https://cdds.io/config"
             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
             xsi:schemaLocation="https://cdds.io/config https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd">
-  <Domain id="any">
+  <Domain Id="any">
     <General>
       <!-- The NIC toward the DDS peers on THIS machine (robot LAN interface
            on the G1 onboard PC, e.g. eth0; "lo" for same-machine testing).
@@ -27,10 +27,26 @@
       <Interfaces>
         <NetworkInterface name="lo" priority="default" multicast="default"/>
       </Interfaces>
+      <!-- Keep each UDP datagram within one MTU. The default MaxMessageSize
+           (14720 B) bundles ~10 RTPS fragments per datagram, which the IP
+           layer re-fragments on a 1500-MTU LAN: one lost wire packet then
+           costs ten fragments at once, and kernel reassembly adds its own
+           failure mode (IpReasmFails observed on the receiver). Trade-off:
+           ~10x more sendmsg() calls on the transmitter per frame. -->
+      <FragmentSize>1344 B</FragmentSize>
+      <MaxMessageSize>1400 B</MaxMessageSize>
+      <MaxRexmitMessageSize>1400 B</MaxRexmitMessageSize>
     </General>
     <Internal>
-      <SocketSendBufferSize min="16MB"/>
-      <SocketReceiveBufferSize min="16MB"/>
+      <SocketSendBufferSize min="16MiB"/>
+      <SocketReceiveBufferSize min="16MiB"/>
     </Internal>
+    <!-- Diagnostics: uncomment to have CycloneDDS log the fully resolved
+         configuration (verifies these settings actually apply).
+    <Tracing>
+      <Verbosity>config</Verbosity>
+      <OutputFile>/tmp/cyclonedds.log</OutputFile>
+    </Tracing>
+    -->
   </Domain>
 </CycloneDDS>
