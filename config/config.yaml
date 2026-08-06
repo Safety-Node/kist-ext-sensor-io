@@ -74,6 +74,13 @@ mic_defaults:
 # PCM name (hw:N,0). Capture is S16_LE at the given rate/channels — modes
 # the hardware can't do fail loudly at start (arecord --dump-hw-params).
 mics:
+  # ---------------------------------------------------------------------
+  # - name: array
+  #   device: L16K6Ch            # ALSA card name (find: arecord -l) or hw:N,0
+  #   sample_rate: 16000
+  #   channels: 6
+  #   enabled: false
+  # ---------------------------------------------------------------------
   - name: array
     device: L16K6Ch              # reSpeaker Flex XVF3800 (fixed 16k/6ch)
     sample_rate: 16000
