@@ -148,6 +148,7 @@ To run a single sensor in isolation:
 ./build/test_realsense_receiver         # per-camera received fps
 ./build/test_realsense_receiver_viewer  # grid: color | depth, one column per camera
 ./build/test_mic_receiver               # per-mic chunk/s + KB/s
+./build/test_mic_receiver_listener [mic_name]    # play one mic on the speakers
 ```
 
 Transmitters run on the machine with the sensor; receivers anywhere on the

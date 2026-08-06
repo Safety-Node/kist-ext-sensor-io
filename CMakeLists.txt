@@ -295,3 +295,10 @@ endif()
 add_executable(test_mic_receiver test/test_mic_receiver.cpp)
 target_link_libraries(test_mic_receiver PRIVATE mic_receiver mic_config)
 
+# Audible variant of the Rx runner — plays one mic on an ALSA output (the
+# mic twin of test_realsense_receiver_viewer). Needs libasound for playback.
+if(ALSA_FOUND)
+    add_executable(test_mic_receiver_listener test/test_mic_receiver_listener.cpp)
+    target_link_libraries(test_mic_receiver_listener PRIVATE mic_receiver mic_config ALSA::ALSA)
+endif()
+
