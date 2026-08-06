@@ -57,3 +57,32 @@ rx.stop();
 
 The names are in `config/config.yaml` (`realsense_cameras[].name`);
 `kist::camera_names_from_yaml(root)` returns them if you'd rather not hardcode.
+
+## MicReceiver
+
+One `MicReceiver` per microphone — `name` selects the topic
+(`rt/kist/mic/<name>/audio`). Chunks are self-describing (rate / channels /
+format ride along). The buffer is latest-wins, so a consumer that needs
+EVERY chunk (contiguous audio) must tap the hook — set it before `start()`:
+
+```cpp
+#include "common/dds_config.hpp"
+#include "system/mic_receiver.hpp"
+
+kist::MicReceiver rx;
+kist::apply_dds_config(root);
+rx.set_on_chunk([](const kist::AudioChunk& c) {
+    // runs on the DDS receive thread — keep cheap (copy out, signal, return)
+    // c.data = interleaved PCM (c.format, c.sample_rate, c.channels)
+});
+if (!rx.start(domain_id, "", "array"))                 // mic name
+    return 1;
+
+// or poll liveness/latest from any thread (not a contiguous stream)
+auto chunk = rx.chunk().GetData();
+
+rx.stop();
+```
+
+The names are in `config/config.yaml` (`mics[].name`);
+`kist::mic_names_from_yaml(root)` returns them.

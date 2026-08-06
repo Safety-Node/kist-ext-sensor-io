@@ -2,7 +2,7 @@
 
 External (attached) sensor I/O for the KIST G1 stack
 
-Sensors: UWB (Decawave DWM1001-dev), RealSense cameras
+Sensors: UWB (Decawave DWM1001-dev), RealSense cameras, microphones (ALSA)
 
 ## Architecture
 
@@ -16,6 +16,7 @@ Sensors: UWB (Decawave DWM1001-dev), RealSense cameras
 | CycloneDDS + CycloneDDS-CXX | 0.10.2 | `idlc`/`idlcxx` codegen for the custom DDS types |
 | `librealsense2` | 2.58.1 | RealSense capture |
 | x264 | distro | H.264 color encode |
+| ALSA (libasound2) | distro | microphone capture |
 | FFmpeg / libav | distro | H.264 color decode |
 | OpenCV | distro | viewer probe |
 | `yaml-cpp` | distro | config parsing |
@@ -58,6 +59,7 @@ sudo apt update && sudo apt install -y \
     build-essential cmake git pkg-config \
     libyaml-cpp-dev \
     libx264-dev libavcodec-dev libavutil-dev libswscale-dev libopencv-dev \
+    libasound2-dev \
     libusb-1.0-0-dev libudev-dev libssl-dev
 ```
 
@@ -117,13 +119,14 @@ cmake -B build && cmake --build build
 
 Set up the config once before running:
 
-- `config/config.yaml` — cameras (`name`/`serial`), UWB serial port.
+- `config/config.yaml` — cameras (`name`/`serial`), mics (`name`/`device`),
+  UWB serial port.
 - `config/cyclonedds.xml` — set the NIC (default `lo` for same-machine
   testing; the LAN interface, e.g. `eth0`, for two machines).
 - All keys: [docs/configuration.md](docs/configuration.md).
 
 ```bash
-# device side (sensors plugged in) — publish everything: UWB + all cameras
+# device side (sensors plugged in) — publish everything: UWB + cameras + mics
 ./build/kist_ext_sensor_io tx
 
 # consumer side — receive everything, print per-second rates
@@ -138,11 +141,13 @@ To run a single sensor in isolation:
 # device side (sensor plugged in) — publish
 ./build/test_uwb_transmitter            # DWM dongle -> DDS
 ./build/test_realsense_transmitter      # every camera in realsense_cameras -> DDS
+./build/test_mic_transmitter            # every mic in mics -> DDS (PCM chunks)
 
 # consumer side — subscribe
 ./build/test_uwb_receiver               # prints received fixes
 ./build/test_realsense_receiver         # per-camera received fps
 ./build/test_realsense_receiver_viewer  # grid: color | depth, one column per camera
+./build/test_mic_receiver               # per-mic chunk/s + KB/s
 ```
 
 Transmitters run on the machine with the sensor; receivers anywhere on the
