@@ -37,6 +37,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libavutil-dev \
     libswscale-dev \
     libopencv-dev \
+    libasound2-dev \
+    alsa-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # ─── idlc toolchain (custom DDS IDL types) ────────────────────────────────────

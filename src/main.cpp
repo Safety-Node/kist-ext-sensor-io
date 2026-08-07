@@ -10,6 +10,7 @@
 
 #include "common/config.hpp"
 #include "common/dds_config.hpp"
+#include "mic/mic_config.hpp"
 #include "realsense/realsense_config.hpp"
 #include "system/ext_sensor_io_rx.hpp"
 #include "system/ext_sensor_io_tx.hpp"
@@ -40,13 +41,15 @@ int run_tx(const YAML::Node& root, int domain_id, const std::string& iface) {
 
     kist::ExtSensorIoTx tx;
     if (!tx.start(domain_id, iface, uwb_enabled ? &uwb : nullptr,
-                  kist::cameras_from_yaml(root)))
+                  kist::cameras_from_yaml(root), kist::mics_from_yaml(root)))
         return 1;
-    std::printf("[kist_ext_sensor_io] tx: %zu camera(s)%s on domain=%d\n",
-                tx.cameras().size(), tx.uwb() ? " + uwb" : "", domain_id);
+    std::printf("[kist_ext_sensor_io] tx: %zu camera(s) + %zu mic(s)%s on domain=%d\n",
+                tx.cameras().size(), tx.mics().size(),
+                tx.uwb() ? " + uwb" : "", domain_id);
 
     struct Last { uint64_t c = 0, d = 0; };
     std::vector<Last> last(tx.cameras().size());
+    std::vector<uint64_t> mic_last(tx.mics().size(), 0);
     auto last_fix_time = std::chrono::steady_clock::time_point{};
     uint64_t uwb_count = 0, uwb_last = 0;
     auto window = std::chrono::steady_clock::now();
@@ -71,6 +74,14 @@ int run_tx(const YAML::Node& root, int domain_id, const std::string& iface) {
                         (unsigned long long)(d - last[i].d));
             last[i] = {c, d};
         }
+        for (size_t i = 0; i < tx.mics().size(); ++i) {
+            const auto& mic = tx.mics()[i];
+            const uint64_t p = mic.tx->published();
+            std::printf("  %-12s %llu chunk/s  overruns %llu\n", mic.name.c_str(),
+                        (unsigned long long)(p - mic_last[i]),
+                        (unsigned long long)mic.tx->overruns());
+            mic_last[i] = p;
+        }
         if (tx.uwb()) {
             std::printf("  %-12s %llu fix/s\n", "uwb",
                         (unsigned long long)(uwb_count - uwb_last));
@@ -87,13 +98,17 @@ int run_rx(const YAML::Node& root, int domain_id, const std::string& iface) {
 
     kist::ExtSensorIoRx rx;
     if (!rx.start(domain_id, iface, uwb_enabled,
-                  kist::camera_names_from_yaml(root)))
+                  kist::camera_names_from_yaml(root),
+                  kist::mic_names_from_yaml(root)))
         return 1;
-    std::printf("[kist_ext_sensor_io] rx: %zu camera(s)%s on domain=%d\n",
-                rx.cameras().size(), rx.uwb() ? " + uwb" : "", domain_id);
+    std::printf("[kist_ext_sensor_io] rx: %zu camera(s) + %zu mic(s)%s on domain=%d\n",
+                rx.cameras().size(), rx.mics().size(),
+                rx.uwb() ? " + uwb" : "", domain_id);
 
     struct Last { uint64_t c = 0, d = 0; };
     std::vector<Last> last(rx.cameras().size());
+    std::vector<uint64_t> mic_seen(rx.mics().size(), 0), mic_last(rx.mics().size(), 0);
+    std::vector<std::chrono::steady_clock::time_point> mic_time(rx.mics().size());
     auto last_fix_time = std::chrono::steady_clock::time_point{};
     uint64_t uwb_count = 0, uwb_last = 0;
     auto window = std::chrono::steady_clock::now();
@@ -104,6 +119,13 @@ int run_rx(const YAML::Node& root, int domain_id, const std::string& iface) {
             if (s.HasData() && s.timestamp != last_fix_time) {
                 last_fix_time = s.timestamp;
                 uwb_count++;
+            }
+        }
+        for (size_t i = 0; i < rx.mics().size(); ++i) {
+            auto c = rx.mics()[i].rx->chunk().GetDataWithTime();
+            if (c.HasData() && c.timestamp != mic_time[i]) {
+                mic_time[i] = c.timestamp;
+                mic_seen[i]++;
             }
         }
         const auto now = std::chrono::steady_clock::now();
@@ -117,6 +139,11 @@ int run_rx(const YAML::Node& root, int domain_id, const std::string& iface) {
                         (unsigned long long)(c - last[i].c),
                         (unsigned long long)(d - last[i].d));
             last[i] = {c, d};
+        }
+        for (size_t i = 0; i < rx.mics().size(); ++i) {
+            std::printf("  %-12s %llu chunk/s\n", rx.mics()[i].name.c_str(),
+                        (unsigned long long)(mic_seen[i] - mic_last[i]));
+            mic_last[i] = mic_seen[i];
         }
         if (rx.uwb()) {
             std::printf("  %-12s %llu fix/s\n", "uwb",

@@ -82,6 +82,47 @@ H.264 encode; drop `color_fps` or `align_to_color` per camera if frames stall.
 | `color_tune` | `zerolatency` | x264 tune |
 | `color_profile` | `baseline` | H.264 profile |
 
+## `mics` + `mic_defaults`
+
+Microphones are a **list**, same shape as the cameras: shared settings live
+in `mic_defaults`; each `mics` entry adds `name` + `device` and may override
+any default. A runner spawns one Transmitter/Receiver per entry, and every
+mic's DDS topic is namespaced by its `name`. Capture is S16_LE interleaved
+PCM at the given rate/channels — a mode the hardware can't do fails loudly
+at start (`arecord --dump-hw-params` lists what it can do).
+
+### `mics` — per-mic entries
+
+| Key | Default | Meaning |
+|---|---|---|
+| `name` | (required) | mic name. Namespaces the DDS topic `rt/kist/mic/<name>/audio` and defaults the frame_id. Tx and Rx agree by this name. |
+| `device` | (required) | ALSA card name to match (`arecord -l` lists them — card numbers move between boots, names don't), or a literal PCM name (`hw:3,0`) |
+| `enabled` | `true` | run this mic; `false` skips it on both Tx and Rx |
+
+Any `mic_defaults` field may also appear in an entry to override it for that
+one mic.
+
+```yaml
+mics:
+  - name: array
+    device: L16K6Ch        # reSpeaker Flex XVF3800 (fixed 16k/6ch)
+    sample_rate: 16000
+    channels: 6
+  - name: uno
+    device: UNO            # ESI NEVA UNO
+    sample_rate: 48000
+    channels: 2
+```
+
+### `mic_defaults` — shared capture settings
+
+| Key | Default | Meaning |
+|---|---|---|
+| `sample_rate` | `16000` | capture rate (Hz) |
+| `channels` | `1` | interleaved channel count |
+| `chunk_ms` | `100` | PCM per DDS message (100ms -> 10 chunks/s) |
+| `frame_id` | `<name>` | frame_id stamped on published chunks |
+
 ## `cyclonedds.xml`
 
 The network interface and the DDS transport tuning live here — **not in

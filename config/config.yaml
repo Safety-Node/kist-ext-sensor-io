@@ -63,3 +63,30 @@ realsense_cameras:
 
   - name: right_wrist
     serial: "260322270228"
+
+# Settings shared by every microphone. Any `mics` entry may override a field.
+mic_defaults:
+  chunk_ms: 100                  # PCM per DDS message (10 chunks/s)
+
+# One entry per microphone. `name` namespaces the DDS topic
+# (rt/kist/mic/<name>/audio); `device` is the ALSA card name (arecord -l
+# lists them — card numbers move between boots, names don't) or a literal
+# PCM name (hw:N,0). Capture is S16_LE at the given rate/channels — modes
+# the hardware can't do fail loudly at start (arecord --dump-hw-params).
+mics:
+  # ---------------------------------------------------------------------
+  # - name: array
+  #   device: L16K6Ch            # ALSA card name (find: arecord -l) or hw:N,0
+  #   sample_rate: 16000
+  #   channels: 6
+  #   enabled: false
+  # ---------------------------------------------------------------------
+  - name: array
+    device: L16K6Ch              # reSpeaker Flex XVF3800 (fixed 16k/6ch)
+    sample_rate: 16000
+    channels: 6
+
+  - name: uno
+    device: UNO                  # ESI NEVA UNO (44.1k-192k, 2-4ch)
+    sample_rate: 48000
+    channels: 2
