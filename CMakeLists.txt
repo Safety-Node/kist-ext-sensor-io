@@ -302,3 +302,13 @@ if(ALSA_FOUND)
     target_link_libraries(test_mic_receiver_listener PRIVATE mic_receiver mic_config ALSA::ALSA)
 endif()
 
+# Visual variant — scrolling STFT spectrogram per mic (window, or PNG when
+# headless). Same embedding as test_mic_receiver, plus OpenCV (cv::dft +
+# display).
+if(OpenCV_FOUND)
+    add_executable(test_mic_receiver_stft test/test_mic_receiver_stft.cpp)
+    target_link_libraries(test_mic_receiver_stft
+        PRIVATE mic_receiver mic_config ${OpenCV_LIBS})
+    target_include_directories(test_mic_receiver_stft PRIVATE ${OpenCV_INCLUDE_DIRS})
+endif()
+
