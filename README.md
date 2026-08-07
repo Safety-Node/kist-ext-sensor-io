@@ -59,7 +59,7 @@ sudo apt update && sudo apt install -y \
     build-essential cmake git pkg-config \
     libyaml-cpp-dev \
     libx264-dev libavcodec-dev libavutil-dev libswscale-dev libopencv-dev \
-    libasound2-dev \
+    libasound2-dev alsa-utils \
     libusb-1.0-0-dev libudev-dev libssl-dev
 ```
 
@@ -148,7 +148,8 @@ To run a single sensor in isolation:
 ./build/test_realsense_receiver         # per-camera received fps
 ./build/test_realsense_receiver_viewer  # grid: color | depth, one column per camera
 ./build/test_mic_receiver               # per-mic chunk/s + KB/s
-./build/test_mic_receiver_listener [mic_name]    # play one mic on the speakers
+./build/test_mic_receiver_listener array plughw:N,M  # play one mic on an output
+                                        # find N,M: aplay -l, then speaker-test -D plughw:N,M
 ./build/test_mic_receiver_stft [mic_name]        # scrolling spectrogram per mic
 ```
 

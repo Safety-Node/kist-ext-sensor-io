@@ -1,9 +1,10 @@
 // Audible variant of the Rx runner — the mic twin of
 // test_realsense_receiver_viewer: subscribes to ONE mic and plays its
 // chunks on an ALSA output as they arrive, plus a chunk/s line.
-//   ./test_mic_receiver_listener [mic_name] [config] [alsa_out]
+//   ./test_mic_receiver_listener [mic_name] [alsa_out] [config]
 // mic_name defaults to the first enabled `mics` entry; alsa_out defaults
-// to "default" (the plug layer converts rate/channels for the output).
+// to "default" (the plug layer converts rate/channels for the output) —
+// find the audible device with `aplay -l` + `speaker-test -D plughw:N,M`.
 // Ctrl-C / SIGTERM to stop.
 
 #include "common/config.hpp"
@@ -60,8 +61,8 @@ private:
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IOLBF, 0);
     const std::string mic_arg     = (argc >= 2) ? argv[1] : "";
-    const std::string config_path = (argc >= 3) ? argv[2] : "config/config.yaml";
-    const std::string alsa_out    = (argc >= 4) ? argv[3] : "default";
+    const std::string alsa_out    = (argc >= 3) ? argv[2] : "default";
+    const std::string config_path = (argc >= 4) ? argv[3] : "config/config.yaml";
 
     kist::Config::instance().load(config_path);
     const auto& root = kist::Config::instance().root();
