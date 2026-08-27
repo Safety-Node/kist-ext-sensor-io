@@ -66,12 +66,19 @@ sudo apt update && sudo apt install -y \
 #### 4. Install CycloneDDS (idlc toolchain)
 
 CycloneDDS + CycloneDDS-CXX 0.10.2 into `/opt/cyclonedds`, pinned to match the
-SDK's bundled `libddscxx`:
+SDK's bundled `libddscxx`. Type/topic discovery OFF: the 0.10.x XTypes parser
+segfaults on the TypeObject a modern DDS peer (e.g. kist-vla-inference's
+python reader) advertises in discovery; with it off, endpoints match by type
+name (how the unitree bus already interops). The runtime must LOAD this
+build — the binaries' RUNPATH points at the SDK's vendored copy (built WITH
+type discovery), so run with `LD_LIBRARY_PATH=/opt/cyclonedds/lib`
+(LD_LIBRARY_PATH beats DT_RUNPATH; the docker image sets it):
 
 ```bash
 git clone --depth 1 -b 0.10.2 https://github.com/eclipse-cyclonedds/cyclonedds.git /tmp/cyclonedds
 cmake -S /tmp/cyclonedds -B /tmp/cyclonedds/build \
-    -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds -DBUILD_IDLC=ON -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds -DBUILD_IDLC=ON -DCMAKE_BUILD_TYPE=Release \
+    -DENABLE_TYPE_DISCOVERY=OFF -DENABLE_TOPIC_DISCOVERY=OFF
 sudo cmake --build /tmp/cyclonedds/build --target install -j"$(nproc)"
 
 git clone --depth 1 -b 0.10.2 https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git /tmp/cyclonedds-cxx
