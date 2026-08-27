@@ -64,6 +64,15 @@ RUN git clone --depth 1 --branch "${CYCLONEDDS_VERSION}" \
     cmake --build /tmp/cyclonedds/build --target install -j "$(nproc)" && \
     git clone --depth 1 --branch "${CYCLONEDDS_VERSION}" \
         https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git /tmp/cyclonedds-cxx && \
+    # 0.10.2 upstream bug: Topic<T>::discover_topic() calls
+    # TopicTraits<T>::getTypeInfo() unguarded, but that trait only exists
+    # under DDSCXX_HAS_TYPE_DISCOVERY — the build breaks against a
+    # discovery-less core. Guard the call site; the fallback passes a null
+    # typeinfo to lookup_topic (dds_find_topic finds by name).
+    sed -i 's|^    std::unique_ptr<dds_typeinfo_t|#ifdef DDSCXX_HAS_TYPE_DISCOVERY\n&|' \
+        /tmp/cyclonedds-cxx/src/ddscxx/include/dds/topic/detail/TTopicImpl.hpp && \
+    sed -i 's|lookup_topic(name, type_info.get(), timeout);|&\n#else\n    dds_entity_t ddsc_topic = dp.delegate()->lookup_topic(name, nullptr, timeout);\n#endif|' \
+        /tmp/cyclonedds-cxx/src/ddscxx/include/dds/topic/detail/TTopicImpl.hpp && \
     cmake -S /tmp/cyclonedds-cxx -B /tmp/cyclonedds-cxx/build \
         -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds \
         -DCMAKE_PREFIX_PATH=/opt/cyclonedds -DCMAKE_BUILD_TYPE=Release \

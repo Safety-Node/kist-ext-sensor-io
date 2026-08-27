@@ -82,6 +82,13 @@ cmake -S /tmp/cyclonedds -B /tmp/cyclonedds/build \
 sudo cmake --build /tmp/cyclonedds/build --target install -j"$(nproc)"
 
 git clone --depth 1 -b 0.10.2 https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git /tmp/cyclonedds-cxx
+# 0.10.2 upstream bug: discover_topic() uses getTypeInfo() unguarded, which
+# only exists under DDSCXX_HAS_TYPE_DISCOVERY — guard the call site so the
+# build works against the discovery-less core (null typeinfo = find by name):
+sed -i 's|^    std::unique_ptr<dds_typeinfo_t|#ifdef DDSCXX_HAS_TYPE_DISCOVERY\n&|' \
+    /tmp/cyclonedds-cxx/src/ddscxx/include/dds/topic/detail/TTopicImpl.hpp
+sed -i 's|lookup_topic(name, type_info.get(), timeout);|&\n#else\n    dds_entity_t ddsc_topic = dp.delegate()->lookup_topic(name, nullptr, timeout);\n#endif|' \
+    /tmp/cyclonedds-cxx/src/ddscxx/include/dds/topic/detail/TTopicImpl.hpp
 cmake -S /tmp/cyclonedds-cxx -B /tmp/cyclonedds-cxx/build \
     -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds -DCMAKE_PREFIX_PATH=/opt/cyclonedds -DCMAKE_BUILD_TYPE=Release \
     -DENABLE_TYPE_DISCOVERY=OFF -DENABLE_TOPIC_DISCOVERY=OFF
