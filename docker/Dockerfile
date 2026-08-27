@@ -66,7 +66,8 @@ RUN git clone --depth 1 --branch "${CYCLONEDDS_VERSION}" \
         https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git /tmp/cyclonedds-cxx && \
     cmake -S /tmp/cyclonedds-cxx -B /tmp/cyclonedds-cxx/build \
         -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds \
-        -DCMAKE_PREFIX_PATH=/opt/cyclonedds -DCMAKE_BUILD_TYPE=Release && \
+        -DCMAKE_PREFIX_PATH=/opt/cyclonedds -DCMAKE_BUILD_TYPE=Release \
+        -DENABLE_TYPE_DISCOVERY=OFF -DENABLE_TOPIC_DISCOVERY=OFF && \
     cmake --build /tmp/cyclonedds-cxx/build --target install -j "$(nproc)" && \
     rm -rf /tmp/cyclonedds /tmp/cyclonedds-cxx
 ENV PATH=/opt/cyclonedds/bin:${PATH}

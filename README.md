@@ -83,7 +83,8 @@ sudo cmake --build /tmp/cyclonedds/build --target install -j"$(nproc)"
 
 git clone --depth 1 -b 0.10.2 https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git /tmp/cyclonedds-cxx
 cmake -S /tmp/cyclonedds-cxx -B /tmp/cyclonedds-cxx/build \
-    -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds -DCMAKE_PREFIX_PATH=/opt/cyclonedds -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds -DCMAKE_PREFIX_PATH=/opt/cyclonedds -DCMAKE_BUILD_TYPE=Release \
+    -DENABLE_TYPE_DISCOVERY=OFF -DENABLE_TOPIC_DISCOVERY=OFF
 sudo cmake --build /tmp/cyclonedds-cxx/build --target install -j"$(nproc)"
 
 export PATH=/opt/cyclonedds/bin:$PATH      # idlc on PATH for Build
