@@ -47,46 +47,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # libs. CycloneDDS-CXX provides the C++ backend (idlcxx) that ros-humble's
 # idlc lacked. Installed to /opt so it never shadows the SDK's own libs — we
 # use only the idlc/idlcxx BUILD tools; linking still uses the vendored .so.
-# ENABLE_TYPE_DISCOVERY=OFF: the 0.10.x XTypes parser segfaults
-# (ddsi_xt_type_init_impl "invalid type object") on the TypeObject a modern
-# peer advertises in discovery — e.g. the python `cyclonedds` 11.x reader in
-# kist-vla-inference subscribing to the camera stream. With type discovery
-# off the core neither advertises nor parses TypeObjects and endpoints match
-# by type name (how the unitree bus already interops). TOPIC_DISCOVERY
-# depends on TYPE_DISCOVERY, so it goes off together.
 ARG CYCLONEDDS_VERSION=0.10.2
 RUN git clone --depth 1 --branch "${CYCLONEDDS_VERSION}" \
         https://github.com/eclipse-cyclonedds/cyclonedds.git /tmp/cyclonedds && \
     cmake -S /tmp/cyclonedds -B /tmp/cyclonedds/build \
         -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds \
-        -DBUILD_IDLC=ON -DCMAKE_BUILD_TYPE=Release \
-        -DENABLE_TYPE_DISCOVERY=OFF -DENABLE_TOPIC_DISCOVERY=OFF && \
+        -DBUILD_IDLC=ON -DCMAKE_BUILD_TYPE=Release && \
     cmake --build /tmp/cyclonedds/build --target install -j "$(nproc)" && \
     git clone --depth 1 --branch "${CYCLONEDDS_VERSION}" \
         https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git /tmp/cyclonedds-cxx && \
-    # 0.10.2 upstream bug: Topic<T>::discover_topic() calls
-    # TopicTraits<T>::getTypeInfo() unguarded, but that trait only exists
-    # under DDSCXX_HAS_TYPE_DISCOVERY — the build breaks against a
-    # discovery-less core. Guard the call site; the fallback passes a null
-    # typeinfo to lookup_topic (dds_find_topic finds by name).
-    sed -i 's|^    std::unique_ptr<dds_typeinfo_t|#ifdef DDSCXX_HAS_TYPE_DISCOVERY\n&|' \
-        /tmp/cyclonedds-cxx/src/ddscxx/include/dds/topic/detail/TTopicImpl.hpp && \
-    sed -i 's|lookup_topic(name, type_info.get(), timeout);|&\n#else\n    dds_entity_t ddsc_topic = dp.delegate()->lookup_topic(name, nullptr, timeout);\n#endif|' \
-        /tmp/cyclonedds-cxx/src/ddscxx/include/dds/topic/detail/TTopicImpl.hpp && \
     cmake -S /tmp/cyclonedds-cxx -B /tmp/cyclonedds-cxx/build \
         -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds \
-        -DCMAKE_PREFIX_PATH=/opt/cyclonedds -DCMAKE_BUILD_TYPE=Release \
-        -DENABLE_TYPE_DISCOVERY=OFF -DENABLE_TOPIC_DISCOVERY=OFF && \
+        -DCMAKE_PREFIX_PATH=/opt/cyclonedds -DCMAKE_BUILD_TYPE=Release && \
     cmake --build /tmp/cyclonedds-cxx/build --target install -j "$(nproc)" && \
     rm -rf /tmp/cyclonedds /tmp/cyclonedds-cxx
 ENV PATH=/opt/cyclonedds/bin:${PATH}
 ENV CYCLONEDDS_HOME=/opt/cyclonedds
-# Make the runtime LOAD this type-discovery-less core: the binaries' RUNPATH
-# points at unitree_sdk2's vendored libddsc/libddscxx (built WITH type
-# discovery — that copy is what crashed), and LD_LIBRARY_PATH takes
-# precedence over DT_RUNPATH. Same 0.10.2, so the ABI the SDK pin exists
-# for is preserved.
-ENV LD_LIBRARY_PATH=/opt/cyclonedds/lib
 # Enlarge the DDS socket buffers (big depth/color frames overflow the default UDP
 # buffers -> receiver drops samples). config/cyclonedds.xml lands here via COPY.
 # See that file re: the host net.core.[rw]mem_max cap under --network host.

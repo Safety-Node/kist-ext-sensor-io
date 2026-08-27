@@ -66,32 +66,17 @@ sudo apt update && sudo apt install -y \
 #### 4. Install CycloneDDS (idlc toolchain)
 
 CycloneDDS + CycloneDDS-CXX 0.10.2 into `/opt/cyclonedds`, pinned to match the
-SDK's bundled `libddscxx`. Type/topic discovery OFF: the 0.10.x XTypes parser
-segfaults on the TypeObject a modern DDS peer (e.g. kist-vla-inference's
-python reader) advertises in discovery; with it off, endpoints match by type
-name (how the unitree bus already interops). The runtime must LOAD this
-build — the binaries' RUNPATH points at the SDK's vendored copy (built WITH
-type discovery), so run with `LD_LIBRARY_PATH=/opt/cyclonedds/lib`
-(LD_LIBRARY_PATH beats DT_RUNPATH; the docker image sets it):
+SDK's bundled `libddscxx`:
 
 ```bash
 git clone --depth 1 -b 0.10.2 https://github.com/eclipse-cyclonedds/cyclonedds.git /tmp/cyclonedds
 cmake -S /tmp/cyclonedds -B /tmp/cyclonedds/build \
-    -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds -DBUILD_IDLC=ON -DCMAKE_BUILD_TYPE=Release \
-    -DENABLE_TYPE_DISCOVERY=OFF -DENABLE_TOPIC_DISCOVERY=OFF
+    -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds -DBUILD_IDLC=ON -DCMAKE_BUILD_TYPE=Release
 sudo cmake --build /tmp/cyclonedds/build --target install -j"$(nproc)"
 
 git clone --depth 1 -b 0.10.2 https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git /tmp/cyclonedds-cxx
-# 0.10.2 upstream bug: discover_topic() uses getTypeInfo() unguarded, which
-# only exists under DDSCXX_HAS_TYPE_DISCOVERY — guard the call site so the
-# build works against the discovery-less core (null typeinfo = find by name):
-sed -i 's|^    std::unique_ptr<dds_typeinfo_t|#ifdef DDSCXX_HAS_TYPE_DISCOVERY\n&|' \
-    /tmp/cyclonedds-cxx/src/ddscxx/include/dds/topic/detail/TTopicImpl.hpp
-sed -i 's|lookup_topic(name, type_info.get(), timeout);|&\n#else\n    dds_entity_t ddsc_topic = dp.delegate()->lookup_topic(name, nullptr, timeout);\n#endif|' \
-    /tmp/cyclonedds-cxx/src/ddscxx/include/dds/topic/detail/TTopicImpl.hpp
 cmake -S /tmp/cyclonedds-cxx -B /tmp/cyclonedds-cxx/build \
-    -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds -DCMAKE_PREFIX_PATH=/opt/cyclonedds -DCMAKE_BUILD_TYPE=Release \
-    -DENABLE_TYPE_DISCOVERY=OFF -DENABLE_TOPIC_DISCOVERY=OFF
+    -DCMAKE_INSTALL_PREFIX=/opt/cyclonedds -DCMAKE_PREFIX_PATH=/opt/cyclonedds -DCMAKE_BUILD_TYPE=Release
 sudo cmake --build /tmp/cyclonedds-cxx/build --target install -j"$(nproc)"
 
 export PATH=/opt/cyclonedds/bin:$PATH      # idlc on PATH for Build
