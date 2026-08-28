@@ -60,6 +60,8 @@ DepthFrame RvlDepthDecoder::decode(const RvlDepthFrame& frame) const {
     result.stamp_ns     = frame.stamp_ns;
     result.frame_id     = frame.frame_id;
     result.depth_scale  = frame.depth_scale;
+    result.fx = frame.fx; result.fy = frame.fy;
+    result.cx = frame.cx; result.cy = frame.cy;
     result.data.resize(static_cast<size_t>(pixel_count) * sizeof(uint16_t), 0);
 
     auto* pixels = reinterpret_cast<uint16_t*>(result.data.data());

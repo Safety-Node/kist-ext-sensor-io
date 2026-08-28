@@ -55,6 +55,8 @@ void DepthPublisher::publish(const RvlDepthFrame& frame) {
     msg.seq(frame.sequence);
     msg.stamp_ns(frame.stamp_ns);
     msg.depth_scale(frame.depth_scale);
+    msg.fx(frame.fx); msg.fy(frame.fy);
+    msg.cx(frame.cx); msg.cy(frame.cy);
     msg.frame_id(frame.frame_id);
     msg.data(frame.data);
     pub_->Write(msg);

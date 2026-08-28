@@ -91,6 +91,16 @@ void CameraCapture::run() {
                     frame.sequence = seq;
                     frame.stamp_ns = static_cast<int64_t>(df.get_timestamp() * 1'000'000.0);
                     frame.depth_scale = depth_scale_;
+                    // Intrinsics of the frame as published: after align_to_color
+                    // this profile carries the color stream's intrinsics, which is
+                    // exactly what deprojects the aligned depth into 3D.
+                    try {
+                        const auto in = df.get_profile()
+                                          .as<rs2::video_stream_profile>()
+                                          .get_intrinsics();
+                        frame.fx = in.fx; frame.fy = in.fy;
+                        frame.cx = in.ppx; frame.cy = in.ppy;
+                    } catch (...) {}
                     frame.frame_id = config_.depth_frame_id;
                     frame.data.resize(size);
                     std::memcpy(frame.data.data(), df.get_data(), size);

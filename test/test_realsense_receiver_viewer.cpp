@@ -153,8 +153,14 @@ int main(int argc, char** argv) {
             for (auto& cam : cams) {
                 cam.color_fps = cam.color_n; cam.depth_fps = cam.depth_n;
                 cam.color_n = cam.depth_n = 0;
-                std::printf("  %-12s color %2d fps  depth %2d fps\n",
-                            cam.name.c_str(), cam.color_fps, cam.depth_fps);
+                // Echo the depth intrinsics so the deprojection inputs (fx/fy/cx/cy,
+                // transmitted with each frame) can be sanity-checked over the wire.
+                char in[80] = "  intr n/a";
+                if (auto d = cam.rx->depth().GetData(); d && d->fx > 0.f)
+                    std::snprintf(in, sizeof in, "  fx=%.1f fy=%.1f cx=%.1f cy=%.1f",
+                                  d->fx, d->fy, d->cx, d->cy);
+                std::printf("  %-12s color %2d fps  depth %2d fps%s\n",
+                            cam.name.c_str(), cam.color_fps, cam.depth_fps, in);
             }
             if (!has_disp)
                 cv::imwrite("/tmp/realsense_view.png", mosaic(cams));

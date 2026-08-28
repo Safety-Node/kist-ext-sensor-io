@@ -22,6 +22,14 @@ module kist_msgs {
         uint64          seq;        // 'sequence' is an IDL keyword
         int64           stamp_ns;
         float           depth_scale;
+        // Pinhole intrinsics of THIS frame (px). With align_to_color the depth
+        // is reprojected into the color frame, so these are the color stream's
+        // intrinsics — the consumer deprojects depth->3D with them directly:
+        //   Z = raw*depth_scale;  X = (u-cx)*Z/fx;  Y = (v-cy)*Z/fy
+        float           fx;
+        float           fy;
+        float           cx;         // principal point x (ppx)
+        float           cy;         // principal point y (ppy)
         string          frame_id;
         sequence<octet> data;   // RVL bitstream
     };

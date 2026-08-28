@@ -18,6 +18,10 @@ struct DepthFrame {
     std::string   frame_id;
     float         depth_scale = 0.001f;  // meters per Z16 unit
 
+    // Pinhole intrinsics of this frame (px). With align_to_color these are the
+    // color stream's intrinsics; deproject: X=(u-cx)*Z/fx, Y=(v-cy)*Z/fy.
+    float         fx = 0.f, fy = 0.f, cx = 0.f, cy = 0.f;
+
     std::vector<std::uint8_t> data;  // Z16
 
     bool empty() const { return data.empty(); }

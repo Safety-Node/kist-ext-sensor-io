@@ -30,6 +30,9 @@ struct RvlDepthFrame {
     std::string   frame_id;
     float         depth_scale = 0.001f;  // mm -> m
 
+    // Pinhole intrinsics of this frame (px), carried through to the consumer.
+    float         fx = 0.f, fy = 0.f, cx = 0.f, cy = 0.f;
+
     std::vector<std::uint8_t> data;  // RVL encoded
 
     bool empty() const { return data.empty(); }
