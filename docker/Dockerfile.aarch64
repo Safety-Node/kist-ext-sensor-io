@@ -1,11 +1,14 @@
-# kist-ext-sensor-io — all sensor-I/O deps in one image (both Tx and Rx
-# roles). This repo uses NO GPU/CUDA (librealsense built with CUDA off, no
-# TensorRT), so the base is plain ubuntu:24.04 — same as Dockerfile.aarch64.
-# The repo is copied in, unitree_sdk2 is cloned (pinned) inside, and it's all
-# built at image-build time — so the image is self-contained: no host-side
-# vendoring, no bind mount, no in-container setup. `docker run` gives ready
-# binaries. For iterative dev you can still shadow the baked source with a
-# bind mount (see run.sh comments).
+# kist-ext-sensor-io (aarch64) — sensor I/O on the robot's onboard Orin.
+# Mirrors docker/Dockerfile (x86) but for Jetson: this repo uses NO GPU/CUDA
+# (librealsense built with CUDA off, no TensorRT), so the base is plain
+# ubuntu:24.04 — the same userspace generation as gearsonic's aarch64 image
+# (nvcr TensorRT 24.12 is Ubuntu 24.04 inside), so libraries match if the two
+# are composed later, without dragging in TRT this repo never uses.
+#
+# Build/run ON the Orin (arm64) — see docker/build.sh (arch auto-select).
+# Self-contained like the x86 image: deps cloned/built in-image, source baked
+# in. No --gpus / --runtime nvidia (no CUDA); the camera reaches the container
+# via host USB passthrough (run.sh --privileged / -v /dev).
 #
 #   deps by role:
 #     Tx (device machine): librealsense2 (RealSense), x264 (H.264 encode),
