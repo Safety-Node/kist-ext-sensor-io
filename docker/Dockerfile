@@ -27,6 +27,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg \
     lsb-release \
     libyaml-cpp-dev \
+    nano \
+    vim \
+    less \
+    iproute2 \
+    procps \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 # ─── camera codec + view deps ─────────────────────────────────────────────────
