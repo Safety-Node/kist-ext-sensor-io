@@ -1,10 +1,11 @@
 # kist-ext-sensor-io — all sensor-I/O deps in one image (both Tx and Rx
-# roles). Base matched to kist-gearsonic-inference so the two compose into
-# one orchestrated image later. The repo is copied in, unitree_sdk2 is cloned
-# (pinned) inside, and it's all built at image-build time — so the image is
-# self-contained: no host-side vendoring, no bind mount, no in-container setup.
-# `docker run` gives ready binaries. For iterative dev you can still shadow the
-# baked source with a bind mount (see run.sh comments).
+# roles). This repo uses NO GPU/CUDA (librealsense built with CUDA off, no
+# TensorRT), so the base is plain ubuntu:24.04 — same as Dockerfile.aarch64.
+# The repo is copied in, unitree_sdk2 is cloned (pinned) inside, and it's all
+# built at image-build time — so the image is self-contained: no host-side
+# vendoring, no bind mount, no in-container setup. `docker run` gives ready
+# binaries. For iterative dev you can still shadow the baked source with a
+# bind mount (see run.sh comments).
 #
 #   deps by role:
 #     Tx (device machine): librealsense2 (RealSense), x264 (H.264 encode),
@@ -12,7 +13,7 @@
 #     Rx (workstation):    libavcodec/util/swscale (H.264 decode), OpenCV
 #     both:                unitree_sdk2 (cloned in-image, pinned),
 #                          yaml-cpp, idlc toolchain (custom DDS IDL types)
-FROM nvcr.io/nvidia/tensorrt:24.12-py3
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
