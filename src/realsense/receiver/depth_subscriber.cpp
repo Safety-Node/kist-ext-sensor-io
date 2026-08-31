@@ -60,6 +60,10 @@ void DepthSubscriber::on_depth_update(const void* message) {
     frame.sequence    = msg.seq();
     frame.stamp_ns    = msg.stamp_ns();
     frame.depth_scale = msg.depth_scale();
+    frame.fx          = msg.fx();
+    frame.fy          = msg.fy();
+    frame.cx          = msg.cx();
+    frame.cy          = msg.cy();
     frame.frame_id    = msg.frame_id();
     frame.data        = msg.data();
 

@@ -67,6 +67,8 @@ RvlDepthFrame RvlEncoder::encode(const DepthFrame& frame) const {
     result.stamp_ns    = frame.stamp_ns;
     result.frame_id    = frame.frame_id;
     result.depth_scale = frame.depth_scale;
+    result.fx = frame.fx; result.fy = frame.fy;
+    result.cx = frame.cx; result.cy = frame.cy;
     result.data.reserve(frame.data.size() / 2);
 
     BitWriter writer(result.data);
