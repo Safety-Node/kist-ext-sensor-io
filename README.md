@@ -34,16 +34,16 @@ All following steps run from the repository root.
 
 #### Quick Start with Docker
 
-The image bakes in everything below (SDK, packages, libraries, and the build):
+The image bakes in everything — SDK, packages, libraries, build.
+`build.sh` picks the Dockerfile for your architecture (x86 / Jetson).
 
 ```bash
-./docker/build.sh      # builds the image (docker build -t kist-ext-sensor-io)
-./docker/run.sh        # shell in the container; prebuilt binaries under build/
+./docker/build.sh      # build the image
+./docker/run.sh        # shell in the container; binaries under build/
 ```
 
-`run.sh` wires `--network host` (DDS), `--privileged -v /dev` (RealSense USB +
-`/dev/uwb`), and X11 (viewer). The numbered steps below are the manual
-(non-Docker) alternative; the UWB udev rule is host-side either way.
+This is the whole setup; the numbered steps below are the manual (non-Docker)
+alternative. The UWB udev rule is host-side either way.
 
 #### 2. Install unitree_sdk2
 
